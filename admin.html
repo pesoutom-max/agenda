@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FacilPyme Pro - Administrar Calendario</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="pro-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="logo">FacilPyme <span style="font-weight: 400; opacity: 0.6;">Admin</span></div>
+                <a href="pro.html"
+                    style="text-decoration: none; color: var(--primary); font-size: 0.9rem; font-weight: 600;">Ver
+                    Agenda</a>
+            </div>
+        </header>
+
+        <main id="admin-app">
+            <section id="admin-view" class="fade-in">
+                <h1>Gestionar Calendario</h1>
+
+                <div class="form-group" style="margin-top: 24px;">
+                    <label>Selecciona una fecha para gestionar</label>
+                    <input type="date" id="admin-date-picker" onchange="loadDateData()">
+                </div>
+
+                <div id="date-controls" style="display: none;">
+                    <div style="display: flex; gap: 8px; margin-bottom: 24px;">
+                        <button class="btn-primary" style="margin: 0; flex: 1; background: var(--text-main);"
+                            onclick="blockDay()">Bloquear Día Completo</button>
+                        <button class="btn-primary" style="margin: 0; flex: 1; background: var(--secondary);"
+                            onclick="unblockDay()" id="btn-unblock-day" style="display: none;">Desbloquear Día</button>
+                    </div>
+
+                    <h3 style="font-size: 1rem; margin-bottom: 12px;">Estado de los Slots</h3>
+                    <div class="time-grid" id="admin-time-grid">
+                        <!-- Slots will be injected here -->
+                    </div>
+                </div>
+
+                <div id="appointments-section" style="margin-top: 32px; display: none;">
+                    <h3 style="font-size: 1rem; margin-bottom: 12px;">Citas Agendadas</h3>
+                    <div id="admin-appointments-list">
+                        <!-- Appointments will be injected here -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; padding: 20px;">
+        <div
+            style="background: white; width: 100%; max-width: 400px; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+            <h2 style="margin-bottom: 20px;">Editar Cita</h2>
+            <input type="hidden" id="edit-id">
+
+            <div class="form-group">
+                <label>Nombre del Paciente</label>
+                <input type="text" id="edit-name">
+            </div>
+            <div class="form-group">
+                <label>Teléfono</label>
+                <input type="tel" id="edit-phone" maxlength="9">
+            </div>
+            <div class="form-group">
+                <label>RUT</label>
+                <input type="text" id="edit-rut">
+            </div>
+            <div class="form-group">
+                <label>Horario</label>
+                <select id="edit-time"
+                    style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit;">
+                    <option value="09:00">09:00</option>
+                    <option value="09:45">09:45</option>
+                    <option value="10:30">10:30</option>
+                    <option value="11:15">11:15</option>
+                    <option value="12:00">12:00</option>
+                    <option value="13:30">13:30</option>
+                    <option value="14:15">14:15</option>
+                    <option value="15:00">15:00</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button class="btn-primary" style="margin: 0; flex: 1; background: #EEE; color: #333;"
+                    onclick="closeModal()">Cancelar</button>
+                <button class="btn-primary" style="margin: 0; flex: 1;" onclick="saveEdit()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="firebase-config.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, setDoc, deleteDoc, initializeFirestore, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const app = initializeApp(firebaseConfig);
+        const db = initializeFirestore(app, { experimentalForceLongPolling: true });
+
+        const timeSlots = ["09:00", "09:45", "10:30", "11:15", "12:00", "13:30", "14:15", "15:00"];
+        let currentData = { appointments: [], blocks: [] };
+
+        // Set default date to today
+        const picker = document.getElementById('admin-date-picker');
+        picker.value = new Date().toLocaleDateString('en-CA');
+
+        window.loadDateData = function () {
+            const date = picker.value;
+            if (!date) return;
+
+            document.getElementById('date-controls').style.display = 'block';
+            document.getElementById('appointments-section').style.display = 'block';
+
+            // Escuchar Citas
+            const qApp = query(collection(db, "appointments"), where("date", "==", date));
+            onSnapshot(qApp, (snap) => {
+                currentData.appointments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderAll();
+            });
+
+            // Escuchar Bloqueos
+            const qBlock = query(collection(db, "blocks"), where("date", "==", date));
+            onSnapshot(qBlock, (snap) => {
+                currentData.blocks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderAll();
+            });
+        };
+
+        function renderAll() {
+            renderTimeGrid();
+            renderAppointments();
+
+            const isDayBlocked = currentData.blocks.some(b => b.time === "all");
+            document.getElementById('btn-unblock-day').style.display = isDayBlocked ? 'block' : 'none';
+        }
+
+        function renderTimeGrid() {
+            const grid = document.getElementById('admin-time-grid');
+            grid.innerHTML = '';
+
+            timeSlots.forEach(time => {
+                const isAppointed = currentData.appointments.find(a => a.time === time && a.status === 'confirmed');
+                const isBlocked = currentData.blocks.find(b => b.time === time || b.time === 'all');
+
+                const slot = document.createElement('div');
+                slot.className = `time-slot ${isAppointed ? 'active' : ''} ${isBlocked ? 'blocked' : ''}`;
+                slot.style.position = 'relative';
+                slot.style.height = 'auto';
+                slot.style.padding = '12px 8px';
+
+                if (isBlocked) {
+                    slot.style.background = '#FEEBEB';
+                    slot.style.borderColor = '#FF3B30';
+                }
+
+                slot.innerHTML = `
+                    <div style="font-weight: 700;">${time}</div>
+                    <div style="font-size: 0.7rem; opacity: 0.7;">${isAppointed ? 'Ocupado' : isBlocked ? 'Bloqueado' : 'Libre'}</div>
+                    <button onclick="toggleBlock('${time}', ${!!isBlocked})" style="margin-top: 8px; width: 100%; font-size: 0.6rem; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: white; cursor: pointer;">
+                        ${isBlocked ? 'Desbloquear' : 'Bloquear'}
+                    </button>
+                `;
+                grid.appendChild(slot);
+            });
+        }
+
+        function renderAppointments() {
+            const list = document.getElementById('admin-appointments-list');
+            list.innerHTML = '';
+
+            const activeApps = currentData.appointments
+                .filter(a => a.status === 'confirmed')
+                .sort((a, b) => a.time.localeCompare(b.time));
+
+            if (activeApps.length === 0) {
+                list.innerHTML = '<p style="font-size: 0.9rem; color: var(--text-muted);">No hay citas para este día.</p>';
+                return;
+            }
+
+            activeApps.forEach(app => {
+                const card = document.createElement('div');
+                card.className = 'pro-card';
+                card.style.marginBottom = '12px';
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between;">
+                         <div>
+                            <div class="time">${app.time}</div>
+                            <div class="name">${app.patientName}</div>
+                            <div class="service">${app.serviceName}</div>
+                            ${app.patientRut ? `<div style="font-size: 0.8rem; opacity: 0.6;">RUT: ${app.patientRut}</div>` : ''}
+                            <div style="font-size: 0.8rem; opacity: 0.6;">Tel: ${app.patientPhone || 'No registrado'}</div>
+                         </div>
+                         <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button onclick="openEdit('${app.id}')" style="background: var(--primary-soft); color: var(--primary); border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Editar</button>
+                            <button onclick="cancelApp('${app.id}')" style="background: #FEEBEB; color: #FF3B30; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Cancelar</button>
+                         </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        window.toggleBlock = async function (time, currentlyBlocked) {
+            const date = picker.value;
+            if (currentlyBlocked) {
+                const b = currentData.blocks.find(b => b.time === time || b.time === 'all');
+                if (b) await deleteDoc(doc(db, "blocks", b.id));
+            } else {
+                await setDoc(doc(db, "blocks", `${date}_${time}`), {
+                    date: date,
+                    time: time,
+                    createdAt: new Date()
+                });
+            }
+        };
+
+        window.blockDay = async function () {
+            const date = picker.value;
+            await setDoc(doc(db, "blocks", `${date}_all`), {
+                date: date,
+                time: "all",
+                createdAt: new Date()
+            });
+        };
+
+        window.unblockDay = async function () {
+            const date = picker.value;
+            // Unblock "all" and individual slots for that day
+            const q = query(collection(db, "blocks"), where("date", "==", date));
+            const snap = await getDocs(q);
+            const batch = writeBatch(db);
+            snap.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+        };
+
+        window.cancelApp = async function (id) {
+            if (confirm("¿Estás seguro de que deseas cancelar esta cita?")) {
+                await deleteDoc(doc(db, "appointments", id));
+            }
+        };
+
+        import { updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        window.openEdit = function (id) {
+            const app = currentData.appointments.find(a => a.id === id);
+            if (!app) return;
+
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-name').value = app.patientName || '';
+            document.getElementById('edit-phone').value = app.patientPhone || '';
+            document.getElementById('edit-rut').value = app.patientRut || '';
+            document.getElementById('edit-time').value = app.time;
+
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
+        window.closeModal = function () {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+        window.saveEdit = async function () {
+            const id = document.getElementById('edit-id').value;
+            const updates = {
+                patientName: document.getElementById('edit-name').value,
+                patientPhone: document.getElementById('edit-phone').value,
+                patientRut: document.getElementById('edit-rut').value,
+                time: document.getElementById('edit-time').value
+            };
+
+            const btn = document.querySelector('#edit-modal .btn-primary:last-child');
+            btn.disabled = true;
+            btn.innerText = 'Guardando...';
+
+            try {
+                await updateDoc(doc(db, "appointments", id), updates);
+                closeModal();
+            } catch (e) {
+                console.error("Error updating appointment:", e);
+                alert("Hubo un error al actualizar la cita.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Guardar Cambios';
+            }
+        }
+
+        // Initial load
+        loadDateData();
+    </script>
+</body>
+
+</html>
