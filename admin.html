@@ -163,17 +163,15 @@
 
         // Escuchar todos los agendamientos del mes para los puntos rojos
         async function fetchMonthAppointments() {
-            // Render basic calendar first so it's visible immediately
             renderCalendarAdmin();
-
             const year = currentMonth.getFullYear();
             const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
             const startStr = `${year}-${month}-01`;
             const endStr = `${year}-${month}-31`;
 
             try {
+                // Simplificamos la consulta para evitar problemas de índices compuestos
                 const q = query(collection(db, "appointments"),
-                    where("status", "==", "confirmed"),
                     where("date", ">=", startStr),
                     where("date", "<=", endStr));
 
@@ -181,14 +179,14 @@
                 const counts = {};
                 snap.forEach(doc => {
                     const data = doc.data();
-                    counts[data.date] = true;
+                    if (data.status === 'confirmed') {
+                        counts[data.date] = true;
+                    }
                 });
                 appointmentsByDay = counts;
-                // Render again with the red dots
                 renderCalendarAdmin();
             } catch (e) {
-                console.error("Error fetching month appointments:", e);
-                // Still render even on error
+                console.error("Error fetching month dots:", e);
                 renderCalendarAdmin();
             }
         }
