@@ -246,9 +246,12 @@
                 const hasApp = appointmentsByDay[dateStr];
                 const isBlocked = blocksByDay[dateStr];
 
+                // If blocked, use a white dot for contrast
+                const dotColor = isBlocked ? 'white' : '#FF3B30';
+
                 html += `
-                    <div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''} ${hasApp ? 'has-appointment' : ''} ${isBlocked ? 'is-blocked' : ''}" 
-                         style="position: relative;"
+                    <div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''} ${isBlocked ? 'is-blocked' : ''} ${hasApp ? 'has-appointment' : ''}" 
+                         style="position: relative; ${hasApp ? `--dot-color: ${dotColor};` : ''}"
                          onclick="selectDateAdmin('${dateStr}')">
                         ${day}
                     </div>

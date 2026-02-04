@@ -323,10 +323,10 @@ h1 {
 }
 
 .calendar-day.is-blocked {
-    background-color: #FEEBEB;
-    color: #FF3B30;
+    background-color: #FF3B30 !important;
+    color: white !important;
     font-weight: 700;
-    border: 1px solid #FF3B30;
+    border-radius: 50%;
 }
 
 .calendar-day.has-appointment::after {
@@ -337,7 +337,7 @@ h1 {
     transform: translateX(-50%);
     width: 6px;
     height: 6px;
-    background-color: #FF3B30;
+    background-color: var(--dot-color, #FF3B30);
     border-radius: 50%;
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
     z-index: 2;
