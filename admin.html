@@ -334,10 +334,15 @@
                 const snap = await getDocs(q);
                 const allApps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const todayStr = new Date().toLocaleDateString('en-CA');
+                const now = new Date();
+                const formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+                const todayStr = formatDate(now);
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
-                const tomorrowStr = tomorrow.toLocaleDateString('en-CA');
+                const tomorrowStr = formatDate(tomorrow);
+
+                console.log("Reminders: Searching for", { todayStr, tomorrowStr });
 
                 const reminders = [];
 
@@ -345,16 +350,16 @@
                     if (app.date === tomorrowStr) {
                         reminders.push({ ...app, type: '24h' });
                     } else if (app.date === todayStr) {
-                        // Check if it's within next 2-3 hours (approx)
                         const [h, m] = app.time.split(':').map(Number);
                         const appTime = new Date();
                         appTime.setHours(h, m, 0, 0);
-                        const now = new Date();
+
                         const diffMs = appTime - now;
                         const diffHours = diffMs / (1000 * 60 * 60);
 
-                        if (diffHours > 0 && diffHours <= 3) {
-                            reminders.push({ ...app, type: '2h' });
+                        // Show if it's in the future for today
+                        if (diffHours > 0) {
+                            reminders.push({ ...app, type: diffHours <= 3 ? '2h' : 'today' });
                         }
                     }
                 });
@@ -369,19 +374,34 @@
                     const card = document.createElement('div');
                     card.className = 'pro-card';
                     card.style.marginBottom = '12px';
-                    card.style.borderLeft = app.type === '2h' ? '4px solid #FF9500' : '4px solid #34C759';
 
-                    const msg = app.type === '24h'
-                        ? `Hola ${app.patientName}, te recordamos tu hora para ${app.serviceName} mañana ${app.date} a las ${app.time}. Por favor confirma tu asistencia. Muchas gracias.`
-                        : `Hola ${app.patientName}, te esperamos en unas horas (${app.time}) para tu atención de ${app.serviceName}. ¡Nos vemos pronto!`;
+                    let label = '';
+                    let color = '';
+                    let msg = '';
+
+                    if (app.type === '24h') {
+                        label = 'Mañana (24h)';
+                        color = '#34C759'; // Green
+                        msg = `Hola ${app.patientName}, te recordamos tu hora para ${app.serviceName} mañana ${app.date} a las ${app.time}. Por favor confirma tu asistencia. Muchas gracias.`;
+                    } else if (app.type === '2h') {
+                        label = 'Hoy (Pronto)';
+                        color = '#FF9500'; // Orange
+                        msg = `Hola ${app.patientName}, te esperamos en unas horas (${app.time}) para tu atención de ${app.serviceName}. ¡Nos vemos pronto!`;
+                    } else {
+                        label = 'Hoy (Pendiente)';
+                        color = '#007AFF'; // Blue
+                        msg = `Hola ${app.patientName}, te recordamos tu hora de hoy para ${app.serviceName} a las ${app.time}. ¡Nos vemos!`;
+                    }
+
+                    card.style.borderLeft = `4px solid ${color}`;
 
                     const wpUrl = `https://wa.me/56${app.patientPhone}?text=${encodeURIComponent(msg)}`;
 
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                             <div>
-                                <span style="font-size: 0.7rem; font-weight: 700; color: ${app.type === '2h' ? '#FF9500' : '#34C759'}; text-transform: uppercase;">
-                                    ${app.type === '24h' ? 'Mañana (24h)' : 'Hoy (Pronto)'}
+                                <span style="font-size: 0.7rem; font-weight: 700; color: ${color}; text-transform: uppercase;">
+                                    ${label}
                                 </span>
                                 <div style="font-weight: 700; font-size: 1.1rem; margin: 4px 0;">${app.time} - ${app.patientName}</div>
                                 <div style="font-size: 0.8rem; opacity: 0.7;">${app.serviceName}</div>
