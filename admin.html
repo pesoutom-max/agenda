@@ -20,32 +20,49 @@
         </header>
 
         <main id="admin-app">
-            <section id="admin-view" class="fade-in">
-                <h1>Gestionar Calendario</h1>
+            <section id="view-admin" class="fade-in">
+                <h1>Panel de Gestión</h1>
+                <p class="subtitle">Administra horarios y bloqueos</p>
 
-                <div class="form-group" style="margin-top: 24px;">
-                    <label>Selecciona una fecha para gestionar</label>
-                    <input type="date" id="admin-date-picker" onchange="loadDateData()">
+                <!-- Admin Tabs -->
+                <div
+                    style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                    <button onclick="switchAdminTab('agenda')" id="tab-agenda" class="tab-btn active">📅 Agenda</button>
+                    <button onclick="switchAdminTab('reminders')" id="tab-reminders" class="tab-btn">🔔
+                        Recordatorios</button>
                 </div>
 
-                <div id="date-controls" style="display: none;">
+                <div id="tab-content-agenda">
+                    <div class="form-group" style="margin-bottom: 24px;">
+                        <label>Selecciona el día</label>
+                        <input type="date" id="admin-date-picker"
+                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit;">
+                    </div>
+
                     <div style="display: flex; gap: 8px; margin-bottom: 24px;">
-                        <button class="btn-primary" style="margin: 0; flex: 1; background: var(--text-main);"
-                            onclick="blockDay()">Bloquear Día Completo</button>
-                        <button class="btn-primary" style="margin: 0; flex: 1; background: var(--secondary);"
-                            onclick="unblockDay()" id="btn-unblock-day" style="display: none;">Desbloquear Día</button>
+                        <button class="btn-primary"
+                            style="margin: 0; padding: 10px; font-size: 0.9rem; background: var(--text-main);"
+                            onclick="blockDay()">Bloquear Día</button>
+                        <button class="btn-primary"
+                            style="margin: 0; padding: 10px; font-size: 0.9rem; background: #EEE; color: #333;"
+                            onclick="unblockDay()">Desbloquear Día</button>
                     </div>
 
-                    <h3 style="font-size: 1rem; margin-bottom: 12px;">Estado de los Slots</h3>
-                    <div class="time-grid" id="admin-time-grid">
-                        <!-- Slots will be injected here -->
+                    <div class="calendar-grid" id="admin-time-grid">
+                        <!-- Slots dynamic -->
+                    </div>
+
+                    <div id="appointments-section" style="margin-top: 32px; display: none;">
+                        <h3 style="font-size: 1rem; margin-bottom: 12px;">Citas Agendadas</h3>
+                        <div id="admin-appointments-list">
+                            <!-- Appointments will be injected here -->
+                        </div>
                     </div>
                 </div>
 
-                <div id="appointments-section" style="margin-top: 32px; display: none;">
-                    <h3 style="font-size: 1rem; margin-bottom: 12px;">Citas Agendadas</h3>
-                    <div id="admin-appointments-list">
-                        <!-- Appointments will be injected here -->
+                <div id="tab-content-reminders" style="display: none;">
+                    <div id="reminders-list">
+                        <!-- Reminders will be injected here -->
                     </div>
                 </div>
             </section>
@@ -99,7 +116,7 @@
     <script src="firebase-config.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, query, where, onSnapshot, doc, setDoc, deleteDoc, initializeFirestore, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, setDoc, deleteDoc, initializeFirestore, getDocs, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const app = initializeApp(firebaseConfig);
         const db = initializeFirestore(app, { experimentalForceLongPolling: true });
@@ -240,14 +257,6 @@
             await batch.commit();
         };
 
-        window.cancelApp = async function (id) {
-            if (confirm("¿Estás seguro de que deseas cancelar esta cita?")) {
-                await deleteDoc(doc(db, "appointments", id));
-            }
-        };
-
-        import { updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
         window.openEdit = function (id) {
             const app = currentData.appointments.find(a => a.id === id);
             if (!app) return;
@@ -287,6 +296,107 @@
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Guardar Cambios';
+            }
+        }
+
+        window.cancelApp = async function (id) {
+            const app = currentData.appointments.find(a => a.id === id);
+            if (!app) return;
+
+            if (confirm(`¿Estás seguro de que deseas cancelar la cita de ${app.patientName}?`)) {
+                await deleteDoc(doc(db, "appointments", id));
+
+                if (confirm("¿Deseas enviar un aviso de cancelación por WhatsApp al paciente?")) {
+                    const msg = `Hola ${app.patientName}, te informamos que tu cita para ${app.serviceName} del día ${app.date} a las ${app.time} ha sido cancelada. Saludos.`;
+                    window.open(`https://wa.me/56${app.patientPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                }
+            }
+        };
+
+        // --- Tabs Logic ---
+        window.switchAdminTab = function (tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            document.getElementById('tab-content-agenda').style.display = tab === 'agenda' ? 'block' : 'none';
+            document.getElementById('tab-content-reminders').style.display = tab === 'reminders' ? 'block' : 'none';
+
+            if (tab === 'reminders') loadReminders();
+        }
+
+        async function loadReminders() {
+            const container = document.getElementById('reminders-list');
+            container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Cargando pacientes para recordatorios...</p>';
+
+            try {
+                // Fetch all confirmed appointments
+                const q = query(collection(db, "appointments"), where("status", "==", "confirmed"));
+                const snap = await getDocs(q);
+                const allApps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const todayStr = new Date().toLocaleDateString('en-CA');
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const tomorrowStr = tomorrow.toLocaleDateString('en-CA');
+
+                const reminders = [];
+
+                allApps.forEach(app => {
+                    if (app.date === tomorrowStr) {
+                        reminders.push({ ...app, type: '24h' });
+                    } else if (app.date === todayStr) {
+                        // Check if it's within next 2-3 hours (approx)
+                        const [h, m] = app.time.split(':').map(Number);
+                        const appTime = new Date();
+                        appTime.setHours(h, m, 0, 0);
+                        const now = new Date();
+                        const diffMs = appTime - now;
+                        const diffHours = diffMs / (1000 * 60 * 60);
+
+                        if (diffHours > 0 && diffHours <= 3) {
+                            reminders.push({ ...app, type: '2h' });
+                        }
+                    }
+                });
+
+                if (reminders.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No hay recordatorios pendientes para hoy o mañana.</p>';
+                    return;
+                }
+
+                container.innerHTML = '<h3>Pendientes de Recordatorio</h3>';
+                reminders.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).forEach(app => {
+                    const card = document.createElement('div');
+                    card.className = 'pro-card';
+                    card.style.marginBottom = '12px';
+                    card.style.borderLeft = app.type === '2h' ? '4px solid #FF9500' : '4px solid #34C759';
+
+                    const msg = app.type === '24h'
+                        ? `Hola ${app.patientName}, te recordamos tu hora para ${app.serviceName} mañana ${app.date} a las ${app.time}. Por favor confirma tu asistencia. Muchas gracias.`
+                        : `Hola ${app.patientName}, te esperamos en unas horas (${app.time}) para tu atención de ${app.serviceName}. ¡Nos vemos pronto!`;
+
+                    const wpUrl = `https://wa.me/56${app.patientPhone}?text=${encodeURIComponent(msg)}`;
+
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <span style="font-size: 0.7rem; font-weight: 700; color: ${app.type === '2h' ? '#FF9500' : '#34C759'}; text-transform: uppercase;">
+                                    ${app.type === '24h' ? 'Mañana (24h)' : 'Hoy (Pronto)'}
+                                </span>
+                                <div style="font-weight: 700; font-size: 1.1rem; margin: 4px 0;">${app.time} - ${app.patientName}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.7;">${app.serviceName}</div>
+                            </div>
+                            <a href="${wpUrl}" target="_blank" class="btn-primary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem; background: #25D366; text-decoration: none;">
+                                Enviar WhatsApp
+                            </a>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (e) {
+                console.error("Error loading reminders:", e);
+                container.innerHTML = '<p style="color: red; padding: 20px;">Error al cargar recordatorios.</p>';
             }
         }
 

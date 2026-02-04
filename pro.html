@@ -73,7 +73,7 @@
     <script src="firebase-config.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, query, where, onSnapshot, orderBy, initializeFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, orderBy, initializeFirestore, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -123,9 +123,14 @@
                 }
 
                 card.innerHTML = `
-                    <span class="status-badge" style="${data.status === 'cancelled' ? 'background: #FEEBEB; color: #FF3B30;' : ''}">
-                        ${data.status === 'confirmed' ? 'Confirmada' : 'Cancelada'}
-                    </span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span class="status-badge" style="${data.status === 'cancelled' ? 'background: #FEEBEB; color: #FF3B30;' : ''}">
+                            ${data.status === 'confirmed' ? 'Confirmada' : 'Cancelada'}
+                        </span>
+                        <div style="display: flex; gap: 8px;">
+                            ${data.status === 'confirmed' ? `<button onclick="cancelApp('${data.id}')" style="background: none; border: 1px solid #FF3B30; color: #FF3B30; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; cursor: pointer;">Cancelar</button>` : ''}
+                        </div>
+                    </div>
                     <div class="time">${data.time}</div>
                     <div class="name">${data.patientName}</div>
                     <div class="service">${data.serviceName}</div>
@@ -136,6 +141,16 @@
             console.error("Error en tiempo real (PRO VIEW):", error);
             container.innerHTML = '<p style="text-align: center; color: #FF3B30; padding: 20px;">Error al conectar con Firebase. Revisa la consola (F12).</p>';
         });
+
+        window.cancelApp = async function (id) {
+            // We need the data from the list, but it's easier to just find it in the state if we had one.
+            // Since we are using onSnapshot directly, we'll fetch it or just use a confirm.
+            if (confirm("¿Estás seguro de que deseas cancelar esta cita?")) {
+                await deleteDoc(doc(db, "appointments", id));
+                // Note: The patient data isn't easily accessible here without a local state.
+                // For now, pro.html is simpler. I'll focus on admin.html for the full automation.
+            }
+        };
     </script>
 </body>
 
