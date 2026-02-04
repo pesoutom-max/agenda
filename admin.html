@@ -329,7 +329,6 @@
             container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Cargando pacientes para recordatorios...</p>';
 
             try {
-                // Fetch all confirmed appointments
                 const q = query(collection(db, "appointments"), where("status", "==", "confirmed"));
                 const snap = await getDocs(q);
                 const allApps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -337,39 +336,40 @@
                 const now = new Date();
                 const formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 
-                const todayStr = formatDate(now);
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                const tomorrowStr = formatDate(tomorrow);
-
-                console.log("Reminders: Searching for", { todayStr, tomorrowStr });
+                // Calculate next 5 days
+                const rangeDates = [];
+                for (let i = 0; i < 5; i++) {
+                    const d = new Date();
+                    d.setDate(d.getDate() + i);
+                    rangeDates.push(formatDate(d));
+                }
 
                 const reminders = [];
 
                 allApps.forEach(app => {
-                    if (app.date === tomorrowStr) {
-                        reminders.push({ ...app, type: '24h' });
-                    } else if (app.date === todayStr) {
+                    const dateIdx = rangeDates.indexOf(app.date);
+                    if (dateIdx === -1) return;
+
+                    if (dateIdx === 0) { // Today
                         const [h, m] = app.time.split(':').map(Number);
                         const appTime = new Date();
                         appTime.setHours(h, m, 0, 0);
+                        const diffHours = (appTime - now) / (1000 * 60 * 60);
 
-                        const diffMs = appTime - now;
-                        const diffHours = diffMs / (1000 * 60 * 60);
-
-                        // Show if it's in the future for today
                         if (diffHours > 0) {
-                            reminders.push({ ...app, type: diffHours <= 3 ? '2h' : 'today' });
+                            reminders.push({ ...app, type: diffHours <= 3 ? '2h' : 'today', dayOffset: 0 });
                         }
+                    } else {
+                        reminders.push({ ...app, type: dateIdx === 1 ? '24h' : 'future', dayOffset: dateIdx });
                     }
                 });
 
                 if (reminders.length === 0) {
-                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No hay recordatorios pendientes para hoy o mañana.</p>';
+                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No hay recordatorios pendientes para los próximos 5 días.</p>';
                     return;
                 }
 
-                container.innerHTML = '<h3>Pendientes de Recordatorio</h3>';
+                container.innerHTML = '<h3>Próximos Recordatorios (5 días)</h3>';
                 reminders.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).forEach(app => {
                     const card = document.createElement('div');
                     card.className = 'pro-card';
@@ -379,35 +379,42 @@
                     let color = '';
                     let msg = '';
 
-                    if (app.type === '24h') {
-                        label = 'Mañana (24h)';
-                        color = '#34C759'; // Green
-                        msg = `Hola ${app.patientName}, te recordamos tu hora para ${app.serviceName} mañana ${app.date} a las ${app.time}. Por favor confirma tu asistencia. Muchas gracias.`;
-                    } else if (app.type === '2h') {
-                        label = 'Hoy (Pronto)';
-                        color = '#FF9500'; // Orange
-                        msg = `Hola ${app.patientName}, te esperamos en unas horas (${app.time}) para tu atención de ${app.serviceName}. ¡Nos vemos pronto!`;
+                    const dayNamesShort = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+                    const appDateObj = new Date(app.date + 'T00:00:00');
+                    const dayName = dayNamesShort[appDateObj.getDay()];
+
+                    if (app.dayOffset === 0) {
+                        if (app.type === '2h') {
+                            label = 'Hoy (Pronto)';
+                            color = '#FF9500';
+                            msg = `Hola ${app.patientName}, te esperamos hoy a las ${app.time} para tu atención de ${app.serviceName}. ¡Nos vemos pronto!`;
+                        } else {
+                            label = 'Hoy';
+                            color = '#007AFF';
+                            msg = `Hola ${app.patientName}, te recordamos tu hora de hoy para ${app.serviceName} a las ${app.time}. ¡Nos vemos!`;
+                        }
+                    } else if (app.dayOffset === 1) {
+                        label = 'Mañana';
+                        color = '#34C759';
+                        msg = `Hola ${app.patientName}, te recordamos tu hora para ${app.serviceName} mañana ${dayName} ${app.date} a las ${app.time}. Por favor confirma asistencia.`;
                     } else {
-                        label = 'Hoy (Pendiente)';
-                        color = '#007AFF'; // Blue
-                        msg = `Hola ${app.patientName}, te recordamos tu hora de hoy para ${app.serviceName} a las ${app.time}. ¡Nos vemos!`;
+                        label = `En ${app.dayOffset} días (${dayName})`;
+                        color = '#5856D6';
+                        msg = `Hola ${app.patientName}, te recordamos tu cita para el ${dayName} ${app.date} a las ${app.time} (${app.serviceName}). Un saludo.`;
                     }
 
                     card.style.borderLeft = `4px solid ${color}`;
-
                     const wpUrl = `https://wa.me/56${app.patientPhone}?text=${encodeURIComponent(msg)}`;
 
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                             <div>
-                                <span style="font-size: 0.7rem; font-weight: 700; color: ${color}; text-transform: uppercase;">
-                                    ${label}
-                                </span>
+                                <span style="font-size: 0.7rem; font-weight: 700; color: ${color}; text-transform: uppercase;">${label}</span>
                                 <div style="font-weight: 700; font-size: 1.1rem; margin: 4px 0;">${app.time} - ${app.patientName}</div>
-                                <div style="font-size: 0.8rem; opacity: 0.7;">${app.serviceName}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.7;">${app.serviceName} (${app.date})</div>
                             </div>
                             <a href="${wpUrl}" target="_blank" class="btn-primary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem; background: #25D366; text-decoration: none;">
-                                Enviar WhatsApp
+                                WhatsApp
                             </a>
                         </div>
                     `;
