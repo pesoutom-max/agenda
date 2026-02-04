@@ -230,6 +230,7 @@
         };
 
         const allTimeSlots = TIME_SLOTS;
+        let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
         let currentMonth = new Date();
         const isProfessional = new URLSearchParams(window.location.search).get('view') === 'pro';
 
@@ -241,6 +242,14 @@
             backBtn.style = 'position: absolute; top: 20px; right: 20px; font-size: 0.8rem; color: var(--primary); font-weight: 600; text-decoration: none;';
             document.body.appendChild(backBtn);
         }
+        async function loadSettings() {
+            try {
+                const docSnap = await getDocs(query(collection(db, "settings")));
+                const hoursDoc = docSnap.docs.find(d => d.id === "business_hours");
+                if (hoursDoc) configData = hoursDoc.data();
+            } catch (e) { console.error("Error loading settings:", e); }
+        }
+        loadSettings();
 
         window.renderCalendar = function () {
             const root = document.getElementById('calendar-root');
@@ -327,6 +336,14 @@
 
                 grid.innerHTML = '';
                 allTimeSlots.forEach(time => {
+                    // Logic for global settings
+                    const isBeforeStart = configData.startTime && time < configData.startTime;
+                    const isAfterEnd = configData.endTime && time > configData.endTime;
+                    const isDuringLunch = (configData.lunchStart && configData.lunchEnd) &&
+                        (time >= configData.lunchStart && time < configData.lunchEnd);
+
+                    if (isBeforeStart || isAfterEnd || isDuringLunch) return; // Hide these slots globaly
+
                     const isTaken = takenTimes.includes(time);
                     const isBlocked = isDayBlocked || blockedTimes.includes(time);
 

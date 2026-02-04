@@ -36,9 +36,11 @@
                     <button onclick="switchAdminTab('today')" id="tab-today" class="tab-btn active" style="flex: 1;">📅
                         Hoy</button>
                     <button onclick="switchAdminTab('agenda')" id="tab-agenda" class="tab-btn" style="flex: 1;">🗓️
-                        Otros Días</button>
+                        Otros</button>
                     <button onclick="switchAdminTab('reminders')" id="tab-reminders" class="tab-btn" style="flex: 1;">🔔
                         Avisos</button>
+                    <button onclick="switchAdminTab('settings')" id="tab-settings" class="tab-btn" style="flex: 1;">⚙️
+                        Conf</button>
                 </div>
 
                 <!-- Tab: Today (Agenda enfocada) -->
@@ -75,6 +77,45 @@
                         <div id="admin-appointments-list">
                             <!-- Appointments will be injected here -->
                         </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Settings -->
+                <div id="tab-content-settings" style="display: none;">
+                    <div class="pro-card" style="border-left: 4px solid var(--text-main);">
+                        <h3>Horarios Generales</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">Define tu ventana
+                            de atención global.</p>
+
+                        <div class="form-group">
+                            <label>Hora de Inicio</label>
+                            <select id="set-start"
+                                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Hora de Cierre (Última hora disponible)</label>
+                            <select id="set-end"
+                                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"></select>
+                        </div>
+
+                        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
+
+                        <h4 style="margin-bottom: 12px;">Descanso / Colación</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>Inicia</label>
+                                <select id="set-lunch-start"
+                                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"></select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Termina</label>
+                                <select id="set-lunch-end"
+                                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"></select>
+                            </div>
+                        </div>
+
+                        <button class="btn-primary" onclick="saveSettings()" style="margin-top: 10px;">Guardar
+                            Configuración</button>
                     </div>
                 </div>
 
@@ -139,6 +180,7 @@
         let currentData = { appointments: [], blocks: [] };
         let appointmentsByDay = {}; // For red dots
         let blocksByDay = {}; // For fully blocked days
+        let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
 
         const picker = document.getElementById('admin-date-picker');
         picker.value = todayStr;
@@ -327,7 +369,16 @@
 
             timeSlots.forEach(time => {
                 const isAppointed = currentData.appointments.find(a => a.time === time && a.status === 'confirmed');
-                const isBlocked = currentData.blocks.find(b => b.time === time || b.time === 'all');
+                const isBlockedByDay = currentData.blocks.find(b => b.time === time || b.time === 'all');
+
+                // Logic for global settings
+                const isBeforeStart = configData.startTime && time < configData.startTime;
+                const isAfterEnd = configData.endTime && time > configData.endTime;
+                const isDuringLunch = (configData.lunchStart && configData.lunchEnd) &&
+                    (time >= configData.lunchStart && time < configData.lunchEnd);
+
+                const isGlobalBlocked = isBeforeStart || isAfterEnd || isDuringLunch;
+                const isBlocked = isBlockedByDay || isGlobalBlocked;
 
                 const slot = document.createElement('div');
                 slot.className = `time-slot ${isAppointed ? 'active' : ''} ${isBlocked ? 'blocked' : ''}`;
@@ -336,15 +387,16 @@
                 slot.style.padding = '12px 8px';
 
                 if (isBlocked) {
-                    slot.style.background = '#FEEBEB';
-                    slot.style.borderColor = '#FF3B30';
+                    slot.style.background = isGlobalBlocked ? '#F2F2F2' : '#FEEBEB';
+                    slot.style.borderColor = isGlobalBlocked ? '#CCC' : '#FF3B30';
+                    slot.style.opacity = isGlobalBlocked ? '0.6' : '1';
                 }
 
                 slot.innerHTML = `
                     <div style="font-weight: 700;">${time}</div>
-                    <div style="font-size: 0.7rem; opacity: 0.7;">${isAppointed ? 'Ocupado' : isBlocked ? 'Bloqueado' : 'Libre'}</div>
-                    <button onclick="toggleBlock('${time}', ${!!isBlocked})" style="margin-top: 8px; width: 100%; font-size: 0.6rem; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: white; cursor: pointer;">
-                        ${isBlocked ? 'Quitar Bloqueo' : 'Bloquear'}
+                    <div style="font-size: 0.7rem; opacity: 0.7;">${isAppointed ? 'Ocupado' : isGlobalBlocked ? 'Fuera Horario' : isBlockedByDay ? 'Bloqueado' : 'Libre'}</div>
+                    <button onclick="toggleBlock('${time}', ${!!isBlockedByDay})" style="margin-top: 8px; width: 100%; font-size: 0.6rem; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: white; cursor: pointer;" ${isGlobalBlocked ? 'disabled' : ''}>
+                        ${isBlockedByDay ? 'Quitar Bloqueo' : 'Bloquear'}
                     </button>
                 `;
                 grid.appendChild(slot);
@@ -490,15 +542,72 @@
             document.getElementById('tab-content-today').style.display = tab === 'today' ? 'block' : 'none';
             document.getElementById('tab-content-agenda').style.display = tab === 'agenda' ? 'block' : 'none';
             document.getElementById('tab-content-reminders').style.display = tab === 'reminders' ? 'block' : 'none';
+            document.getElementById('tab-content-settings').style.display = tab === 'settings' ? 'block' : 'none';
 
-            const titles = { 'today': 'Agenda de Hoy', 'agenda': 'Otros Días', 'reminders': 'Avisos de Pacientes' };
-            const subs = { 'today': 'Tus citas para este día', 'agenda': 'Gestiona bloqueos y fechas futuras', 'reminders': 'Seguimiento y recordatorios' };
+            const titles = { 'today': 'Agenda de Hoy', 'agenda': 'Otros Días', 'reminders': 'Avisos de Pacientes', 'settings': 'Configuración General' };
+            const subs = { 'today': 'Tus citas para este día', 'agenda': 'Gestiona bloqueos y fechas futuras', 'reminders': 'Seguimiento y recordatorios', 'settings': 'Horarios globales de atención' };
 
             document.getElementById('dashboard-title').innerText = titles[tab];
             document.getElementById('dashboard-subtitle').innerText = subs[tab];
 
             if (tab === 'agenda') fetchMonthAppointments();
             if (tab === 'reminders') loadReminders();
+            if (tab === 'settings') loadSettings();
+        }
+
+        // Logic for Settings
+        function fillSettingsSelects() {
+            const selects = ['set-start', 'set-end', 'set-lunch-start', 'set-lunch-end'];
+            selects.forEach(id => {
+                const s = document.getElementById(id);
+                s.innerHTML = '<option value="">Ninguno</option>';
+                timeSlots.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t;
+                    opt.innerText = t;
+                    s.appendChild(opt);
+                });
+            });
+        }
+
+        async function loadSettings() {
+            fillSettingsSelects();
+            try {
+                const docSnap = await getDocs(query(collection(db, "settings")));
+                const hoursDoc = docSnap.docs.find(d => d.id === "business_hours");
+                if (hoursDoc) {
+                    const data = hoursDoc.data();
+                    configData = data;
+                    document.getElementById('set-start').value = data.startTime || "";
+                    document.getElementById('set-end').value = data.endTime || "";
+                    document.getElementById('set-lunch-start').value = data.lunchStart || "";
+                    document.getElementById('set-lunch-end').value = data.lunchEnd || "";
+                    renderAll(); // Refresh grids if settings change
+                }
+            } catch (e) { console.error("Error loading settings:", e); }
+        }
+
+        window.saveSettings = async function () {
+            const btn = document.querySelector('#tab-content-settings .btn-primary');
+            btn.disabled = true;
+            btn.innerText = 'Guardando...';
+
+            try {
+                await setDoc(doc(db, "settings", "business_hours"), {
+                    startTime: document.getElementById('set-start').value,
+                    endTime: document.getElementById('set-end').value,
+                    lunchStart: document.getElementById('set-lunch-start').value,
+                    lunchEnd: document.getElementById('set-lunch-end').value,
+                    updatedAt: new Date()
+                });
+                alert("Configuración guardada correctamente");
+            } catch (e) {
+                console.error("Error saving settings:", e);
+                alert("Error al guardar");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Guardar Configuración';
+            }
         }
 
         async function loadReminders() {
@@ -583,6 +692,7 @@
         }
 
         // Initial load
+        loadSettings();
         listenToday();
         loadDateData();
         listenMonthIndicators();
