@@ -13,9 +13,14 @@
         <header class="pro-header">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div class="logo">FacilPyme <span style="font-weight: 400; opacity: 0.6;">Admin</span></div>
-                <a href="pro.html"
-                    style="text-decoration: none; color: var(--primary); font-size: 0.9rem; font-weight: 600;">Ver
-                    Agenda</a>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <a href="index.html?view=pro" class="btn-primary"
+                        style="margin: 0; padding: 6px 12px; font-size: 0.8rem; background: #28a745; text-decoration: none;">+
+                        Nueva Cita</a>
+                    <a href="pro.html"
+                        style="text-decoration: none; color: var(--primary); font-size: 0.9rem; font-weight: 600;">Ver
+                        Agenda</a>
+                </div>
             </div>
         </header>
 
@@ -93,14 +98,7 @@
                 <label>Horario</label>
                 <select id="edit-time"
                     style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit;">
-                    <option value="09:00">09:00</option>
-                    <option value="09:45">09:45</option>
-                    <option value="10:30">10:30</option>
-                    <option value="11:15">11:15</option>
-                    <option value="12:00">12:00</option>
-                    <option value="13:30">13:30</option>
-                    <option value="14:15">14:15</option>
-                    <option value="15:00">15:00</option>
+                    ${TIME_SLOTS.map(t => `<option value="${t}">${t}</option>`).join('')}
                 </select>
             </div>
 
@@ -121,7 +119,7 @@
         const app = initializeApp(firebaseConfig);
         const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 
-        const timeSlots = ["09:00", "09:45", "10:30", "11:15", "12:00", "13:30", "14:15", "15:00"];
+        const timeSlots = TIME_SLOTS;
         let currentData = { appointments: [], blocks: [] };
 
         // Set default date to today
