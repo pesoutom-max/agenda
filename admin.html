@@ -50,17 +50,18 @@
 
                 <!-- Tab: Calendar/Others -->
                 <div id="tab-content-agenda" style="display: none;">
-                    <div class="form-group"
-                        style="margin-bottom: 20px; background: #F8F9FA; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                        <label
-                            style="font-size: 0.85rem; font-weight: 700; margin-bottom: 10px; display: block;">Gestionar
-                            Fecha Específica</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="date" id="admin-date-picker"
-                                style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit;">
-                            <button class="btn-primary" style="margin: 0; padding: 10px; background: var(--text-main);"
-                                onclick="blockDay()">Bloquear Día</button>
-                        </div>
+                    <div style="margin-bottom: 24px;">
+                        <div id="calendar-root-admin"></div>
+                        <input type="hidden" id="admin-date-picker">
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-bottom: 24px; padding: 0 4px;">
+                        <button class="btn-primary"
+                            style="margin: 0; padding: 10px; font-size: 0.9rem; background: var(--text-main); flex: 1;"
+                            onclick="blockDay()">Bloquear Día</button>
+                        <button class="btn-primary"
+                            style="margin: 0; padding: 10px; font-size: 0.9rem; background: #EEE; color: #333; flex: 1;"
+                            onclick="unblockDay()">Limpiar Día</button>
                     </div>
 
                     <div class="calendar-grid" id="admin-time-grid">
@@ -133,11 +134,13 @@
         const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 
         const timeSlots = TIME_SLOTS;
-        const today = new Date().toLocaleDateString('en-CA');
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        let currentMonth = new Date();
         let currentData = { appointments: [], blocks: [] };
+        let appointmentsByDay = {}; // For red dots
 
         const picker = document.getElementById('admin-date-picker');
-        picker.value = today;
+        picker.value = todayStr;
 
         window.loadDateData = function () {
             const date = picker.value;
@@ -158,9 +161,91 @@
             });
         };
 
+        // Escuchar todos los agendamientos del mes para los puntos rojos
+        async function fetchMonthAppointments() {
+            const year = currentMonth.getFullYear();
+            const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+            const startStr = `${year}-${month}-01`;
+            const endStr = `${year}-${month}-31`;
+
+            const q = query(collection(db, "appointments"),
+                where("status", "==", "confirmed"),
+                where("date", ">=", startStr),
+                where("date", "<=", endStr));
+
+            const snap = await getDocs(q);
+            const counts = {};
+            snap.forEach(doc => {
+                const data = doc.data();
+                counts[data.date] = true;
+            });
+            appointmentsByDay = counts;
+            renderCalendarAdmin();
+        }
+
+        window.renderCalendarAdmin = function () {
+            const root = document.getElementById('calendar-root-admin');
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            let startOffset = (firstDayOfMonth === 0) ? 6 : firstDayOfMonth - 1;
+
+            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const dayNames = ["L", "M", "M", "J", "V", "S", "D"];
+
+            let html = `
+                <div class="calendar-container" style="margin-bottom: 12px;">
+                    <div class="calendar-header">
+                        <button class="calendar-nav-btn" onclick="changeMonthAdmin(-1)">◀</button>
+                        <h3>${monthNames[month]} ${year}</h3>
+                        <button class="calendar-nav-btn" onclick="changeMonthAdmin(1)">▶</button>
+                    </div>
+                    <div class="calendar-grid">
+                        ${dayNames.map(d => `<div class="calendar-day-name">${d}</div>`).join('')}
+            `;
+
+            for (let i = 0; i < startOffset; i++) {
+                html += `<div class="calendar-day disabled"></div>`;
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dateObj = new Date(year, month, day);
+                const isSelected = picker.value === dateStr;
+                const isToday = dateObj.toLocaleDateString('en-CA') === todayStr;
+                const hasApp = appointmentsByDay[dateStr];
+
+                html += `
+                    <div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''} ${hasApp ? 'has-appointment' : ''}" 
+                         style="position: relative;"
+                         onclick="selectDateAdmin('${dateStr}')">
+                        ${day}
+                    </div>
+                `;
+            }
+
+            html += `</div></div>`;
+            root.innerHTML = html;
+        }
+
+        window.changeMonthAdmin = function (offset) {
+            currentMonth.setMonth(currentMonth.getMonth() + offset);
+            fetchMonthAppointments();
+        }
+
+        window.selectDateAdmin = function (date) {
+            picker.value = date;
+            renderCalendarAdmin();
+            loadDateData();
+        }
+
         // Nueva escucha especial para "Hoy" permanente
         function listenToday() {
-            const q = query(collection(db, "appointments"), where("date", "==", today));
+            const q = query(collection(db, "appointments"), where("date", "==", todayStr));
             onSnapshot(q, (snap) => {
                 const todayApps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderTodayTab(todayApps);
@@ -387,6 +472,7 @@
             document.getElementById('dashboard-title').innerText = titles[tab];
             document.getElementById('dashboard-subtitle').innerText = subs[tab];
 
+            if (tab === 'agenda') fetchMonthAppointments();
             if (tab === 'reminders') loadReminders();
         }
 
@@ -474,7 +560,7 @@
         // Initial load
         listenToday();
         loadDateData();
-        picker.addEventListener('change', loadDateData);
+        fetchMonthAppointments();
     </script>
 </body>
 
