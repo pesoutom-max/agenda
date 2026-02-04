@@ -138,6 +138,7 @@
         let currentMonth = new Date();
         let currentData = { appointments: [], blocks: [] };
         let appointmentsByDay = {}; // For red dots
+        let blocksByDay = {}; // For fully blocked days
 
         const picker = document.getElementById('admin-date-picker');
         picker.value = todayStr;
@@ -161,34 +162,51 @@
             });
         };
 
-        // Escuchar todos los agendamientos del mes para los puntos rojos
-        async function fetchMonthAppointments() {
-            renderCalendarAdmin();
+        // Escuchadores de tiempo real para los indicadores del mes (puntos rojos y bloqueos)
+        let unsubIndicators = null;
+
+        function listenMonthIndicators() {
+            if (unsubIndicators) unsubIndicators();
+
             const year = currentMonth.getFullYear();
             const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
             const startStr = `${year}-${month}-01`;
             const endStr = `${year}-${month}-31`;
 
-            try {
-                // Simplificamos la consulta para evitar problemas de índices compuestos
-                const q = query(collection(db, "appointments"),
-                    where("date", ">=", startStr),
-                    where("date", "<=", endStr));
+            // Escuchar citas del mes
+            const qApp = query(collection(db, "appointments"),
+                where("date", ">=", startStr),
+                where("date", "<=", endStr));
 
-                const snap = await getDocs(q);
+            const qBlock = query(collection(db, "blocks"),
+                where("date", ">=", startStr),
+                where("date", "<=", endStr));
+
+            const unsubApp = onSnapshot(qApp, (snap) => {
                 const counts = {};
                 snap.forEach(doc => {
                     const data = doc.data();
-                    if (data.status === 'confirmed') {
-                        counts[data.date] = true;
-                    }
+                    if (data.status === 'confirmed') counts[data.date] = true;
                 });
                 appointmentsByDay = counts;
                 renderCalendarAdmin();
-            } catch (e) {
-                console.error("Error fetching month dots:", e);
+            });
+
+            const unsubBlock = onSnapshot(qBlock, (snap) => {
+                const counts = {};
+                snap.forEach(doc => {
+                    if (doc.data().time === 'all') counts[doc.data().date] = true;
+                });
+                blocksByDay = counts;
                 renderCalendarAdmin();
-            }
+            });
+
+            unsubIndicators = () => { unsubApp(); unsubBlock(); };
+        }
+
+        window.changeMonthAdmin = function (offset) {
+            currentMonth.setMonth(currentMonth.getMonth() + offset);
+            listenMonthIndicators();
         }
 
         window.renderCalendarAdmin = function () {
@@ -226,9 +244,10 @@
                 const isSelected = picker.value === dateStr;
                 const isToday = dateObj.toLocaleDateString('en-CA') === todayStr;
                 const hasApp = appointmentsByDay[dateStr];
+                const isBlocked = blocksByDay[dateStr];
 
                 html += `
-                    <div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''} ${hasApp ? 'has-appointment' : ''}" 
+                    <div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''} ${hasApp ? 'has-appointment' : ''} ${isBlocked ? 'is-blocked' : ''}" 
                          style="position: relative;"
                          onclick="selectDateAdmin('${dateStr}')">
                         ${day}
@@ -238,11 +257,6 @@
 
             html += `</div></div>`;
             root.innerHTML = html;
-        }
-
-        window.changeMonthAdmin = function (offset) {
-            currentMonth.setMonth(currentMonth.getMonth() + offset);
-            fetchMonthAppointments();
         }
 
         window.selectDateAdmin = function (date) {
@@ -568,7 +582,7 @@
         // Initial load
         listenToday();
         loadDateData();
-        fetchMonthAppointments();
+        listenMonthIndicators();
     </script>
 </body>
 

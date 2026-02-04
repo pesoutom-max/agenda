@@ -322,6 +322,13 @@ h1 {
     opacity: 0.3;
 }
 
+.calendar-day.is-blocked {
+    background-color: #FEEBEB;
+    color: #FF3B30;
+    font-weight: 700;
+    border: 1px solid #FF3B30;
+}
+
 .calendar-day.has-appointment::after {
     content: '';
     position: absolute;
