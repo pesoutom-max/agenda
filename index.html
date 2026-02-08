@@ -18,8 +18,8 @@
             <!-- Screen 1: Start -->
             <section id="screen-start" class="fade-in">
                 <h1>Reserva tu hora</h1>
-                <p class="subtitle">Elige el horario que más te acomode</p>
-                <div style="text-align: center; padding: 40px 0;">
+                <p class="subtitle">Elige el horario que m&aacute;s te acomode</p>
+                <div class="start-icon">
                     <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="1.5"
                         stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -28,169 +28,128 @@
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
                 </div>
-                <button class="btn-primary" onclick="goTo('screen-services')">Reservar ahora</button>
+                <button class="btn-primary" id="btn-start">Reservar ahora</button>
             </section>
 
             <!-- Screen 2: Services -->
             <section id="screen-services" class="fade-in" style="display: none;">
-                <h1>¿Qué atención necesitas?</h1>
+                <button class="btn-back" id="btn-back-services">&larr; Volver</button>
+                <h1>&iquest;Qu&eacute; atenci&oacute;n necesitas?</h1>
                 <p class="subtitle">Selecciona un servicio para continuar</p>
                 <div class="card-list">
-                    <div class="selectable-card" onclick="selectService('Limpieza dental', '30 min', this)">
+                    <div class="selectable-card" data-service="Limpieza dental" data-duration="30 min">
                         <div>
                             <h3>Limpieza dental</h3>
                             <span>30 min</span>
                         </div>
                     </div>
-                    <div class="selectable-card" onclick="selectService('Consulta general', '45 min', this)">
+                    <div class="selectable-card" data-service="Consulta general" data-duration="45 min">
                         <div>
                             <h3>Consulta general</h3>
                             <span>45 min</span>
                         </div>
                     </div>
-                    <div class="selectable-card" onclick="selectService('Control', '30 min', this)">
+                    <div class="selectable-card" data-service="Control" data-duration="30 min">
                         <div>
                             <h3>Control</h3>
                             <span>30 min</span>
                         </div>
                     </div>
-                    <div class="selectable-card" onclick="selectService('Urgencia', '60 min', this)">
+                    <div class="selectable-card" data-service="Urgencia" data-duration="60 min">
                         <div>
                             <h3>Urgencia</h3>
                             <span>60 min</span>
                         </div>
                     </div>
                 </div>
-                <button class="btn-primary" id="btn-services" disabled
-                    onclick="goTo('screen-datetime')">Continuar</button>
+                <button class="btn-primary" id="btn-services" disabled>Continuar</button>
             </section>
 
             <!-- Screen 3: Date/Time -->
             <section id="screen-datetime" class="fade-in" style="display: none;">
-                <h1>Elige un día y horario disponible</h1>
+                <button class="btn-back" id="btn-back-datetime">&larr; Volver</button>
+                <h1>Elige un d&iacute;a y horario disponible</h1>
                 <p class="subtitle">Mostrando disponibilidad actual</p>
 
                 <div class="form-group">
-                    <label>Selecciona el día</label>
+                    <label>Selecciona el d&iacute;a</label>
                     <div id="calendar-root"></div>
                     <input type="hidden" id="date-picker">
                 </div>
 
                 <div id="time-selection-container" style="display: none;">
-                    <div class="time-grid" id="patient-time-grid">
-                        <!-- Slots will be injected here -->
-                    </div>
-
-                    <button class="btn-primary" id="btn-datetime" onclick="goTo('screen-data')"
-                        disabled>Continuar</button>
+                    <div class="time-grid" id="patient-time-grid"></div>
+                    <button class="btn-primary" id="btn-datetime" disabled>Continuar</button>
                 </div>
             </section>
 
             <!-- Screen 4: Patient Data -->
             <section id="screen-data" class="fade-in" style="display: none;">
-                <h1>Déjanos tus datos para confirmar la hora</h1>
+                <button class="btn-back" id="btn-back-data">&larr; Volver</button>
+                <h1>D&eacute;janos tus datos para confirmar la hora</h1>
                 <p class="subtitle">Casi listos...</p>
 
                 <div class="form-group">
                     <label>Nombre completo</label>
-                    <input type="text" id="patient-name" placeholder="Ej: Juan Pérez">
+                    <input type="text" id="patient-name" placeholder="Ej: Juan P&eacute;rez">
                 </div>
                 <div class="form-group">
-                    <label>Teléfono <span
-                            style="font-weight: 400; font-size: 0.8rem; opacity: 0.7; display: block; margin-top: 4px;">Ej:
-                            9 1234 5678 (9 dígitos)</span></label>
-                    <input type="tel" id="patient-phone" maxlength="9" placeholder="9XXXXXXXX"
-                        oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <label>Tel&eacute;fono
+                        <span class="label-hint">Ej: 9 1234 5678 (9 d&iacute;gitos)</span>
+                    </label>
+                    <input type="tel" id="patient-phone" maxlength="9" placeholder="9XXXXXXXX">
                 </div>
                 <div class="form-group">
-                    <label>Correo electrónico (opcional) <span
-                            style="font-weight: 400; font-size: 0.8rem; opacity: 0.7; display: block; margin-top: 4px;">Ej:
-                            juan@mail.com</span></label>
+                    <label>Correo electr&oacute;nico (opcional)
+                        <span class="label-hint">Ej: juan@mail.com</span>
+                    </label>
                     <input type="email" id="patient-email" placeholder="tu@email.com">
                 </div>
-                <button class="btn-primary" onclick="confirmBooking()">Siguiente</button>
+                <button class="btn-primary" id="btn-confirm">Siguiente</button>
             </section>
 
-            <!-- Screen: RUT Form -->
+            <!-- Screen 5: RUT Form -->
             <section id="screen-rut" class="fade-in" style="display: none;">
-                <h1>Información Adicional</h1>
-                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 24px;">Para agilizar tu atención,
-                    por favor completa tu RUT.</p>
+                <button class="btn-back" id="btn-back-rut">&larr; Volver</button>
+                <h1>Informaci&oacute;n Adicional</h1>
+                <p class="rut-description">Para agilizar tu atenci&oacute;n, por favor completa tu RUT.</p>
 
                 <div class="form-group">
-                    <label>RUT <span
-                            style="font-weight: 400; font-size: 0.8rem; opacity: 0.7; display: block; margin-top: 4px;">Ej:
-                            12.345.678-9</span></label>
-                    <input type="text" id="patient-rut" placeholder="12345678-9"
-                        oninput="this.value = this.value.toUpperCase()">
+                    <label>RUT
+                        <span class="label-hint">Ej: 12.345.678-9</span>
+                    </label>
+                    <input type="text" id="patient-rut" placeholder="12345678-9">
                 </div>
 
-                <button class="btn-primary" onclick="saveRutAndFinish()">Confirmar y Agendar</button>
+                <button class="btn-primary" id="btn-save-rut">Confirmar y Agendar</button>
             </section>
 
-            <!-- Screen: Success -->
+            <!-- Screen 6: Success -->
             <section id="screen-success" class="fade-in" style="display: none;">
-                <div style="text-align: center; padding: 40px 0;">
-                    <div style="font-size: 4rem; margin-bottom: 20px;">✅</div>
-                    <h1 id="success-message">¡Tu hora quedó reservada!</h1>
-                    <p id="success-detail" style="margin-bottom: 32px; color: var(--text-muted);"></p>
-                    <p style="font-size: 0.9rem; color: var(--text-main); font-weight: 600; margin-bottom: 20px;">
-                        Estamos abriendo WhatsApp para confirmar...</p>
-                    <button class="btn-primary" onclick="window.openWp()">Abrir WhatsApp manualmente</button>
+                <div class="success-content">
+                    <div class="success-icon">&#10004;&#65039;</div>
+                    <h1 id="success-message">&iexcl;Tu hora qued&oacute; reservada!</h1>
+                    <p id="success-detail" class="success-detail"></p>
+                    <p class="success-wp-hint">Estamos abriendo WhatsApp para confirmar...</p>
+                    <button class="btn-primary" id="btn-open-wp">Abrir WhatsApp manualmente</button>
                 </div>
             </section>
 
-            <!-- Screen 5: Confirmation -->
-            <section id="screen-success-old" class="fade-in" style="display: none;">
-                <div style="text-align: center; padding: 40px 0;">
-                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                    </svg>
-                </div>
-                <h1 style="text-align: center;">Tu hora quedó reservada</h1>
-                <p class="subtitle" id="confirmation-msg" style="text-align: center;">Te esperamos el...</p>
-                <div style="background: var(--bg-main); padding: 20px; border-radius: 12px; margin-top: 20px;">
-                    <p><strong>Paciente:</strong> <span id="res-name"></span></p>
-                    <p><strong>Servicio:</strong> <span id="res-service"></span></p>
-                    <p><strong>Fecha:</strong> <span id="res-date"></span></p>
-                    <p><strong>Hora:</strong> <span id="res-time"></span></p>
-                </div>
-
-                <div
-                    style="margin-top: 24px; padding: 15px; border: 1px dashed var(--primary); border-radius: 12px; background: var(--primary-soft);">
-                    <p style="font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-bottom: 8px;">
-                        Simulación de WhatsApp:</p>
-                    <p style="font-size: 0.9rem; font-style: italic;">"Hola <span class="wa-name"></span>, tu hora quedó
-                        reservada para el <span class="wa-date"></span> a las <span class="wa-time"></span>. Te
-                        esperamos."</p>
-                </div>
-
-                <p style="text-align: center; margin-top: 24px; font-size: 0.9rem; color: var(--text-muted);">Recibirás
-                    un recordatorio antes de tu hora.</p>
-                <button class="btn-primary" style="background: var(--text-main);" onclick="location.reload()">Volver al
-                    inicio</button>
-            </section>
-
-            <!-- Screen 6: Cancellation -->
+            <!-- Screen 7: Cancellation -->
             <section id="screen-cancel" class="fade-in" style="display: none;">
-                <h1>¿Deseas cancelar tu hora?</h1>
-                <p class="subtitle">Esta acción liberará el cupo para otro paciente.</p>
-                <div style="background: #FEEBEB; padding: 20px; border-radius: 12px; border: 1px solid #FF3B30;">
+                <h1>&iquest;Deseas cancelar tu hora?</h1>
+                <p class="subtitle">Esta acci&oacute;n liberar&aacute; el cupo para otro paciente.</p>
+                <div class="cancel-info">
                     <p><strong>Cita:</strong> <span id="cancel-service">Consulta general</span></p>
                     <p><strong>Fecha/Hora:</strong> <span id="cancel-datetime">Martes 27, 10:30 AM</span></p>
                 </div>
-                <button class="btn-primary" style="background: #FF3B30;" onclick="confirmCancellation()">Confirmar
-                    Cancelación</button>
-                <button class="btn-primary"
-                    style="background: transparent; color: var(--text-main); border: 1px solid var(--border);"
-                    onclick="goTo('screen-start')">Mantener mi hora</button>
+                <button class="btn-primary btn-danger" id="btn-cancel-confirm">Confirmar Cancelaci&oacute;n</button>
+                <button class="btn-secondary" id="btn-cancel-keep">Mantener mi hora</button>
             </section>
 
-            <!-- Screen 7: Cancel Success -->
+            <!-- Screen 8: Cancel Success -->
             <section id="screen-cancel-success" class="fade-in" style="display: none;">
-                <div style="text-align: center; padding: 40px 0;">
+                <div class="success-content">
                     <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -200,294 +159,18 @@
                 </div>
                 <h1 style="text-align: center;">Tu hora fue cancelada</h1>
                 <p class="subtitle" style="text-align: center;">Gracias por avisar con tiempo.</p>
-                <div
-                    style="margin-top: 24px; padding: 15px; border: 1px dashed #FF3B30; border-radius: 12px; background: #FEEBEB;">
-                    <p style="font-size: 0.85rem; color: #FF3B30; font-weight: 600; margin-bottom: 8px;">Mensaje al
-                        Profesional:</p>
-                    <p style="font-size: 0.9rem; font-style: italic;">"La hora de <span class="wa-name-c">Juan
-                            Pérez</span> del <span class="wa-datetime-c">Martes 27 a las 10:30</span> fue liberada."</p>
+                <div class="cancel-msg-box">
+                    <p class="cancel-msg-label">Mensaje al Profesional:</p>
+                    <p class="cancel-msg-text">&quot;La hora de <span class="wa-name-c">Paciente</span> del <span
+                            class="wa-datetime-c">--</span> fue liberada.&quot;</p>
                 </div>
-                <button class="btn-primary" onclick="location.reload()">Solicitar nueva hora</button>
+                <button class="btn-primary btn-reload">Solicitar nueva hora</button>
             </section>
         </main>
     </div>
 
     <script src="firebase-config.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, initializeFirestore, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const app = initializeApp(firebaseConfig);
-        const db = initializeFirestore(app, { experimentalForceLongPolling: true });
-
-        let bookingData = {
-            service: '',
-            date: '',
-            time: '',
-            name: '',
-            phone: '',
-            email: ''
-        };
-
-        const allTimeSlots = TIME_SLOTS;
-        let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
-        let currentMonth = new Date();
-        const isProfessional = new URLSearchParams(window.location.search).get('view') === 'pro';
-
-        if (isProfessional) {
-            document.querySelector('.logo').innerHTML += ' <span style="font-weight:400; opacity:0.6; font-size: 0.8rem;">(Modo Pro)</span>';
-            const backBtn = document.createElement('a');
-            backBtn.href = 'admin.html';
-            backBtn.innerText = '← Volver al Panel';
-            backBtn.style = 'position: absolute; top: 20px; right: 20px; font-size: 0.8rem; color: var(--primary); font-weight: 600; text-decoration: none;';
-            document.body.appendChild(backBtn);
-        }
-        async function loadSettings() {
-            try {
-                const docSnap = await getDocs(query(collection(db, "settings")));
-                const hoursDoc = docSnap.docs.find(d => d.id === "business_hours");
-                if (hoursDoc) configData = hoursDoc.data();
-            } catch (e) { console.error("Error loading settings:", e); }
-        }
-        loadSettings();
-
-        window.renderCalendar = function () {
-            const root = document.getElementById('calendar-root');
-            const year = currentMonth.getFullYear();
-            const month = currentMonth.getMonth();
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const firstDayOfMonth = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            // Adjust for Monday start (0=Sun, 1=Mon... -> 0=Mon, 6=Sun)
-            let startOffset = (firstDayOfMonth === 0) ? 6 : firstDayOfMonth - 1;
-
-            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            const dayNames = ["L", "M", "M", "J", "V", "S", "D"];
-
-            let html = `
-                <div class="calendar-container">
-                    <div class="calendar-header">
-                        <button class="calendar-nav-btn" onclick="changeMonth(-1)">◀</button>
-                        <h3>${monthNames[month]} ${year}</h3>
-                        <button class="calendar-nav-btn" onclick="changeMonth(1)">▶</button>
-                    </div>
-                    <div class="calendar-grid">
-                        ${dayNames.map(d => `<div class="calendar-day-name">${d}</div>`).join('')}
-            `;
-
-            for (let i = 0; i < startOffset; i++) {
-                html += `<div class="calendar-day disabled"></div>`;
-            }
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const dateObj = new Date(year, month, day);
-                const isDisabled = dateObj < today;
-                const isToday = dateObj.getTime() === today.getTime();
-                const isSelected = document.getElementById('date-picker').value === dateStr;
-
-                html += `
-                    <div class="calendar-day ${isDisabled ? 'disabled' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" 
-                         onclick="${isDisabled ? '' : `selectDate('${dateStr}')`}">
-                        ${day}
-                    </div>
-                `;
-            }
-
-            html += `</div></div>`;
-            root.innerHTML = html;
-        }
-
-        window.changeMonth = function (offset) {
-            currentMonth.setMonth(currentMonth.getMonth() + offset);
-            renderCalendar();
-        }
-
-        window.selectDate = function (date) {
-            document.getElementById('date-picker').value = date;
-            renderCalendar();
-            checkAvailability();
-        }
-
-        window.checkAvailability = async function () {
-            const date = document.getElementById('date-picker').value;
-            if (!date) return;
-
-            // Show the time selection container
-            document.getElementById('time-selection-container').style.display = 'block';
-
-            const grid = document.getElementById('patient-time-grid');
-            grid.innerHTML = '<p style="grid-column: span 3; text-align: center; color: var(--text-muted); font-size: 0.8rem;">Cargando disponibilidad...</p>';
-            document.getElementById('btn-datetime').disabled = true;
-
-            try {
-                // Fetch appointments and blocks for this date
-                const qApp = query(collection(db, "appointments"), where("date", "==", date), where("status", "==", "confirmed"));
-                const qBlock = query(collection(db, "blocks"), where("date", "==", date));
-
-                const [snapApp, snapBlock] = await Promise.all([getDocs(qApp), getDocs(qBlock)]);
-
-                const takenTimes = snapApp.docs.map(d => d.data().time);
-                const blockedTimes = snapBlock.docs.map(d => d.data().time);
-                const isDayBlocked = blockedTimes.includes('all');
-
-                grid.innerHTML = '';
-                allTimeSlots.forEach(time => {
-                    // Logic for global settings
-                    const isBeforeStart = configData.startTime && time < configData.startTime;
-                    const isAfterEnd = configData.endTime && time > configData.endTime;
-                    const isDuringLunch = (configData.lunchStart && configData.lunchEnd) &&
-                        (time >= configData.lunchStart && time < configData.lunchEnd);
-
-                    if (isBeforeStart || isAfterEnd || isDuringLunch) return; // Hide these slots globaly
-
-                    const isTaken = takenTimes.includes(time);
-                    const isBlocked = isDayBlocked || blockedTimes.includes(time);
-
-                    const slot = document.createElement('div');
-                    slot.className = `time-slot ${isTaken || isBlocked ? 'disabled' : ''}`;
-                    slot.innerText = time;
-
-                    if (isTaken || isBlocked) {
-                        slot.style.opacity = '0.3';
-                        slot.style.cursor = 'not-allowed';
-                        slot.style.background = 'var(--border)';
-                    } else {
-                        slot.onclick = () => selectTime(time, slot);
-                    }
-                    grid.appendChild(slot);
-                });
-
-                if (grid.innerHTML === '') {
-                    grid.innerHTML = '<p style="grid-column: span 3; text-align: center; color: #FF3B30; font-size: 0.8rem;">No hay horarios disponibles para este día.</p>';
-                }
-
-            } catch (e) {
-                console.error("Error checking availability:", e);
-                grid.innerHTML = '<p style="grid-column: span 3; text-align: center; color: #FF3B30; font-size: 0.8rem;">Error al cargar disponibilidad.</p>';
-            }
-        };
-
-        window.goTo = function (screenId) {
-            document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
-            document.getElementById(screenId).style.display = 'block';
-            window.scrollTo(0, 0);
-        }
-
-        window.selectService = function (name, duration, el) {
-            bookingData.service = name;
-            document.querySelectorAll('.selectable-card').forEach(c => c.classList.remove('active'));
-            el.classList.add('active');
-            document.getElementById('btn-services').disabled = false;
-        }
-
-        window.selectTime = function (time, el) {
-            bookingData.time = time;
-            document.querySelectorAll('.time-slot').forEach(t => t.classList.remove('active'));
-            el.classList.add('active');
-            document.getElementById('btn-datetime').disabled = false;
-        }
-
-        window.confirmBooking = async function () {
-            console.log("Iniciando confirmación...");
-            const name = document.getElementById('patient-name').value;
-            bookingData.date = document.getElementById('date-picker').value;
-            const phone = document.getElementById('patient-phone').value;
-            const email = document.getElementById('patient-email').value;
-
-            if (!name) {
-                alert("Por favor, ingresa tu nombre.");
-                return;
-            }
-            if (phone.length !== 9) {
-                alert("Por favor, ingresa un número de teléfono válido de 9 dígitos.");
-                return;
-            }
-            bookingData.name = name;
-
-            const btn = document.querySelector('#screen-data .btn-primary');
-            btn.disabled = true;
-            btn.innerText = 'Guardando...';
-
-            console.log("Intentando conectar con Firestore...", bookingData);
-
-            try {
-                // Pre-save data, but wait for RUT
-                bookingData.phone = phone;
-                bookingData.email = email;
-
-                goTo('screen-rut');
-            } catch (e) {
-                console.error("Error setting up data:", e);
-                alert("Hubo un error. Inténtalo de nuevo.");
-                btn.disabled = false;
-            }
-        };
-
-        let lastAppointmentId = '';
-        let wpUrl = '';
-
-        window.saveRutAndFinish = async function () {
-            const rut = document.getElementById('patient-rut').value;
-            const btn = document.querySelector('#screen-rut .btn-primary');
-            btn.disabled = true;
-            btn.innerText = 'Guardando...';
-
-            try {
-                const docRef = await addDoc(collection(db, "appointments"), {
-                    serviceName: bookingData.service,
-                    date: bookingData.date,
-                    time: bookingData.time,
-                    patientName: bookingData.name,
-                    patientPhone: bookingData.phone,
-                    patientEmail: bookingData.email,
-                    patientRut: rut,
-                    status: 'confirmed',
-                    createdAt: serverTimestamp()
-                });
-
-                lastAppointmentId = docRef.id;
-
-                // Prepare WP message
-                const msg = `Su hora ha sido agendada para ${bookingData.service} el día ${bookingData.date} a las ${bookingData.time}. Muchas gracias`;
-                wpUrl = `https://wa.me/56${bookingData.phone}?text=${encodeURIComponent(msg)}`;
-
-                document.getElementById('success-detail').innerText = `Te esperamos el ${bookingData.date} a las ${bookingData.time}.`;
-                goTo('screen-success');
-
-                // Auto redirect to WP after 3 seconds
-                setTimeout(() => {
-                    window.location.href = wpUrl;
-                }, 3000);
-
-            } catch (e) {
-                console.error("Error finishing booking:", e);
-                alert("Hubo un error al guardar la reserva.");
-                btn.disabled = false;
-                btn.innerText = 'Confirmar y Agendar';
-            }
-        };
-
-        window.openWp = function () {
-            window.location.href = wpUrl;
-        };
-
-        window.confirmCancellation = function () {
-            document.querySelector('.wa-name-c').innerText = bookingData.name || "Paciente";
-            document.querySelector('.wa-datetime-c').innerText = `${bookingData.date} a las ${bookingData.time}`;
-            goTo('screen-cancel-success');
-        }
-
-        // Simular llegada desde un link de cancelación de WA
-        if (window.location.hash === '#cancel') {
-            goTo('screen-cancel');
-        }
-        // Initial load
-        renderCalendar();
-    </script>
+    <script type="module" src="js/app.js"></script>
 </body>
 
 </html>

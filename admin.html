@@ -11,10 +11,9 @@
 <body>
     <div class="app-container">
         <header class="pro-header">
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div class="logo">FacilPyme <span style="font-weight: 400; opacity: 0.6;">Pro</span></div>
-                <a href="index.html?view=pro"
-                    style="margin: 0; padding: 4px 8px; font-size: 0.7rem; background: #28a745; color: white; border-radius: 4px; border: none; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 4px; width: fit-content;">
+            <div class="pro-header-inner">
+                <div class="logo">FacilPyme <span class="pro-label">Pro</span></div>
+                <a href="index.html?view=pro" class="btn-agendar">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"
                         stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -30,24 +29,17 @@
                 <h1 id="dashboard-title">Panel de Control</h1>
                 <p class="subtitle" id="dashboard-subtitle">Administra tu agenda y pacientes</p>
 
-                <!-- Unified Tabs -->
-                <div
-                    style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--border); padding-bottom: 4px;">
-                    <button onclick="switchAdminTab('today')" id="tab-today" class="tab-btn active" style="flex: 1;">📅
-                        Hoy</button>
-                    <button onclick="switchAdminTab('agenda')" id="tab-agenda" class="tab-btn" style="flex: 1;">🗓️
-                        Otros</button>
-                    <button onclick="switchAdminTab('reminders')" id="tab-reminders" class="tab-btn" style="flex: 1;">🔔
-                        Avisos</button>
-                    <button onclick="switchAdminTab('settings')" id="tab-settings" class="tab-btn" style="flex: 1;">⚙️
-                        Conf</button>
+                <!-- Tabs -->
+                <div class="tabs-bar">
+                    <button data-tab="today" class="tab-btn active">&#128197; Hoy</button>
+                    <button data-tab="agenda" class="tab-btn">&#128197;&#65039; Otros</button>
+                    <button data-tab="reminders" class="tab-btn">&#128276; Avisos</button>
+                    <button data-tab="settings" class="tab-btn">&#9881;&#65039; Conf</button>
                 </div>
 
-                <!-- Tab: Today (Agenda enfocada) -->
+                <!-- Tab: Today -->
                 <div id="tab-content-today">
-                    <div id="today-agenda-list" class="agenda-list">
-                        <!-- Today's cards will be injected here -->
-                    </div>
+                    <div id="today-agenda-list" class="agenda-list"></div>
                 </div>
 
                 <!-- Tab: Calendar/Others -->
@@ -57,84 +49,66 @@
                         <input type="hidden" id="admin-date-picker">
                     </div>
 
-                    <div style="display: flex; gap: 8px; margin-bottom: 24px; padding: 0 4px;">
-                        <button class="btn-primary"
-                            style="margin: 0; padding: 10px; font-size: 0.9rem; background: var(--text-main); flex: 1;"
-                            onclick="blockDay()">Bloquear Día</button>
-                        <button class="btn-primary"
-                            style="margin: 0; padding: 10px; font-size: 0.9rem; background: #EEE; color: #333; flex: 1;"
-                            onclick="unblockDay()">Limpiar Día</button>
+                    <div class="admin-day-actions">
+                        <button class="btn-primary btn-dark" id="btn-block-day">Bloquear D&iacute;a</button>
+                        <button class="btn-primary btn-unblock" id="btn-unblock-day">Limpiar D&iacute;a</button>
                     </div>
 
-                    <div class="calendar-grid" id="admin-time-grid">
-                        <!-- Slots dynamic -->
-                    </div>
+                    <div class="calendar-grid" id="admin-time-grid"></div>
 
                     <div id="appointments-section" style="margin-top: 32px; display: none;">
                         <h3 style="font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                            📋 Pacientes del día
+                            &#128203; Pacientes del d&iacute;a
                         </h3>
-                        <div id="admin-appointments-list">
-                            <!-- Appointments will be injected here -->
-                        </div>
+                        <div id="admin-appointments-list"></div>
                     </div>
                 </div>
 
                 <!-- Tab: Settings -->
                 <div id="tab-content-settings" style="display: none;">
-                    <div class="pro-card" style="border-left: 4px solid var(--text-main);">
+                    <div class="pro-card settings-card">
                         <h3>Horarios Generales</h3>
-                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">Define tu ventana
-                            de atención global.</p>
+                        <p class="settings-description">Define tu ventana de atenci&oacute;n global.</p>
 
                         <div class="form-group">
                             <label>Hora de Inicio</label>
-                            <select id="set-start"
-                                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"></select>
+                            <select id="set-start"></select>
                         </div>
                         <div class="form-group">
-                            <label>Hora de Cierre (Última hora disponible)</label>
-                            <select id="set-end"
-                                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"></select>
+                            <label>Hora de Cierre (&Uacute;ltima hora disponible)</label>
+                            <select id="set-end"></select>
                         </div>
 
-                        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
+                        <hr class="settings-divider">
 
-                        <h4 style="margin-bottom: 12px;">Descanso / Colación</h4>
-                        <div style="display: flex; gap: 10px;">
-                            <div class="form-group" style="flex: 1;">
+                        <h4 style="margin-bottom: 12px;">Descanso / Colaci&oacute;n</h4>
+                        <div class="settings-row">
+                            <div class="form-group">
                                 <label>Inicia</label>
-                                <select id="set-lunch-start"
-                                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"></select>
+                                <select id="set-lunch-start"></select>
                             </div>
-                            <div class="form-group" style="flex: 1;">
+                            <div class="form-group">
                                 <label>Termina</label>
-                                <select id="set-lunch-end"
-                                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"></select>
+                                <select id="set-lunch-end"></select>
                             </div>
                         </div>
 
-                        <button class="btn-primary" onclick="saveSettings()" style="margin-top: 10px;">Guardar
-                            Configuración</button>
+                        <button class="btn-primary" id="btn-save-settings">Guardar Configuraci&oacute;n</button>
                     </div>
                 </div>
 
                 <!-- Tab: Reminders -->
                 <div id="tab-content-reminders" style="display: none;">
-                    <div id="reminders-list">
-                        <!-- Reminders will be injected here -->
-                    </div>
+                    <div id="reminders-list"></div>
                 </div>
             </section>
         </main>
     </div>
 
     <!-- Edit Modal -->
-    <div id="edit-modal"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; padding: 20px;">
-        <div
-            style="background: white; width: 100%; max-width: 400px; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-            <h2 style="margin-bottom: 20px;">Editar Cita</h2>
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Editar Cita</h2>
             <input type="hidden" id="edit-id">
 
             <div class="form-group">
@@ -142,7 +116,7 @@
                 <input type="text" id="edit-name">
             </div>
             <div class="form-group">
-                <label>Teléfono</label>
+                <label>Tel&eacute;fono</label>
                 <input type="tel" id="edit-phone" maxlength="9">
             </div>
             <div class="form-group">
@@ -151,552 +125,18 @@
             </div>
             <div class="form-group">
                 <label>Horario</label>
-                <select id="edit-time"
-                    style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit;">
-                    ${TIME_SLOTS.map(t => `<option value="${t}">${t}</option>`).join('')}
-                </select>
+                <select id="edit-time"></select>
             </div>
 
-            <div style="display: flex; gap: 12px; margin-top: 24px;">
-                <button class="btn-primary" style="margin: 0; flex: 1; background: #EEE; color: #333;"
-                    onclick="closeModal()">Cancelar</button>
-                <button class="btn-primary" style="margin: 0; flex: 1;" onclick="saveEdit()">Guardar Cambios</button>
+            <div class="modal-actions">
+                <button class="btn-primary btn-modal-cancel" id="btn-modal-cancel">Cancelar</button>
+                <button class="btn-primary" id="btn-modal-save">Guardar Cambios</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
     <script src="firebase-config.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, query, where, onSnapshot, doc, setDoc, deleteDoc, initializeFirestore, getDocs, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const app = initializeApp(firebaseConfig);
-        const db = initializeFirestore(app, { experimentalForceLongPolling: true });
-
-        const timeSlots = TIME_SLOTS;
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        let currentMonth = new Date();
-        let currentData = { appointments: [], blocks: [] };
-        let appointmentsByDay = {}; // For red dots
-        let blocksByDay = {}; // For fully blocked days
-        let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
-
-        const picker = document.getElementById('admin-date-picker');
-        picker.value = todayStr;
-
-        window.loadDateData = function () {
-            const date = picker.value;
-            if (!date) return;
-
-            // Escuchar Citas
-            const qApp = query(collection(db, "appointments"), where("date", "==", date));
-            onSnapshot(qApp, (snap) => {
-                currentData.appointments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderAll();
-            });
-
-            // Escuchar Bloqueos
-            const qBlock = query(collection(db, "blocks"), where("date", "==", date));
-            onSnapshot(qBlock, (snap) => {
-                currentData.blocks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderAll();
-            });
-        };
-
-        // Escuchadores de tiempo real para los indicadores del mes (puntos rojos y bloqueos)
-        let unsubIndicators = null;
-
-        function listenMonthIndicators() {
-            if (unsubIndicators) unsubIndicators();
-
-            const year = currentMonth.getFullYear();
-            const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
-            const startStr = `${year}-${month}-01`;
-            const endStr = `${year}-${month}-31`;
-
-            // Escuchar citas del mes
-            const qApp = query(collection(db, "appointments"),
-                where("date", ">=", startStr),
-                where("date", "<=", endStr));
-
-            const qBlock = query(collection(db, "blocks"),
-                where("date", ">=", startStr),
-                where("date", "<=", endStr));
-
-            const unsubApp = onSnapshot(qApp, (snap) => {
-                const counts = {};
-                snap.forEach(doc => {
-                    const data = doc.data();
-                    if (data.status === 'confirmed') counts[data.date] = true;
-                });
-                appointmentsByDay = counts;
-                renderCalendarAdmin();
-            });
-
-            const unsubBlock = onSnapshot(qBlock, (snap) => {
-                const counts = {};
-                snap.forEach(doc => {
-                    if (doc.data().time === 'all') counts[doc.data().date] = true;
-                });
-                blocksByDay = counts;
-                renderCalendarAdmin();
-            });
-
-            unsubIndicators = () => { unsubApp(); unsubBlock(); };
-        }
-
-        window.changeMonthAdmin = function (offset) {
-            currentMonth.setMonth(currentMonth.getMonth() + offset);
-            listenMonthIndicators();
-        }
-
-        window.renderCalendarAdmin = function () {
-            const root = document.getElementById('calendar-root-admin');
-            const year = currentMonth.getFullYear();
-            const month = currentMonth.getMonth();
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const firstDayOfMonth = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            let startOffset = (firstDayOfMonth === 0) ? 6 : firstDayOfMonth - 1;
-
-            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            const dayNames = ["L", "M", "M", "J", "V", "S", "D"];
-
-            let html = `
-                <div class="calendar-container" style="margin-bottom: 12px;">
-                    <div class="calendar-header">
-                        <button class="calendar-nav-btn" onclick="changeMonthAdmin(-1)">◀</button>
-                        <h3>${monthNames[month]} ${year}</h3>
-                        <button class="calendar-nav-btn" onclick="changeMonthAdmin(1)">▶</button>
-                    </div>
-                    <div class="calendar-grid">
-                        ${dayNames.map(d => `<div class="calendar-day-name">${d}</div>`).join('')}
-            `;
-
-            for (let i = 0; i < startOffset; i++) {
-                html += `<div class="calendar-day disabled"></div>`;
-            }
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const dateObj = new Date(year, month, day);
-                const isSelected = picker.value === dateStr;
-                const isToday = dateObj.toLocaleDateString('en-CA') === todayStr;
-                const hasApp = appointmentsByDay[dateStr];
-                const isBlocked = blocksByDay[dateStr];
-
-                // If blocked, use a white dot for contrast
-                const dotColor = isBlocked ? 'white' : '#FF3B30';
-
-                html += `
-                    <div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''} ${isBlocked ? 'is-blocked' : ''} ${hasApp ? 'has-appointment' : ''}" 
-                         style="position: relative; ${hasApp ? `--dot-color: ${dotColor};` : ''}"
-                         onclick="selectDateAdmin('${dateStr}')">
-                        ${day}
-                    </div>
-                `;
-            }
-
-            html += `</div></div>`;
-            root.innerHTML = html;
-        }
-
-        window.selectDateAdmin = function (date) {
-            picker.value = date;
-            renderCalendarAdmin();
-            loadDateData();
-        }
-
-        // Nueva escucha especial para "Hoy" permanente
-        function listenToday() {
-            const q = query(collection(db, "appointments"), where("date", "==", todayStr));
-            onSnapshot(q, (snap) => {
-                const todayApps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderTodayTab(todayApps);
-            });
-        }
-
-        function renderAll() {
-            renderTimeGrid();
-            renderAppointments();
-
-            const isDayBlocked = currentData.blocks.some(b => b.time === "all");
-            document.getElementById('appointments-section').style.display = 'block';
-        }
-
-        function renderTodayTab(apps) {
-            const container = document.getElementById('today-agenda-list');
-            container.innerHTML = '';
-
-            const sorted = apps.filter(a => a.status === 'confirmed').sort((a, b) => a.time.localeCompare(b.time));
-
-            if (sorted.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-                        <div style="font-size: 3rem; margin-bottom: 10px;">☕</div>
-                        <p>No hay citas agendadas para hoy todavía.</p>
-                    </div>`;
-                return;
-            }
-
-            sorted.forEach(app => {
-                const card = document.createElement('div');
-                card.className = 'pro-card';
-                card.style.marginBottom = '12px';
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="color: var(--primary); font-weight: 800; font-size: 1.2rem;">${app.time}</div>
-                            <div style="font-weight: 700; margin: 4px 0;">${app.patientName}</div>
-                            <div style="font-size: 0.85rem; opacity: 0.7;">${app.serviceName}</div>
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="openEdit('${app.id}')" class="btn-primary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem; background: #f0f0f0; color: #333;">Editar</button>
-                            <button onclick="cancelApp('${app.id}')" class="btn-primary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem; background: #feebeb; color: #ff3b30;">X</button>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function renderTimeGrid() {
-            const grid = document.getElementById('admin-time-grid');
-            grid.innerHTML = '';
-
-            timeSlots.forEach(time => {
-                const isAppointed = currentData.appointments.find(a => a.time === time && a.status === 'confirmed');
-                const isBlockedByDay = currentData.blocks.find(b => b.time === time || b.time === 'all');
-
-                // Logic for global settings
-                const isBeforeStart = configData.startTime && time < configData.startTime;
-                const isAfterEnd = configData.endTime && time > configData.endTime;
-                const isDuringLunch = (configData.lunchStart && configData.lunchEnd) &&
-                    (time >= configData.lunchStart && time < configData.lunchEnd);
-
-                const isGlobalBlocked = isBeforeStart || isAfterEnd || isDuringLunch;
-                const isBlocked = isBlockedByDay || isGlobalBlocked;
-
-                const slot = document.createElement('div');
-                slot.className = `time-slot ${isAppointed ? 'active' : ''} ${isBlocked ? 'blocked' : ''}`;
-                slot.style.position = 'relative';
-                slot.style.height = 'auto';
-                slot.style.padding = '12px 8px';
-
-                if (isBlocked) {
-                    slot.style.background = isGlobalBlocked ? '#F2F2F2' : '#FEEBEB';
-                    slot.style.borderColor = isGlobalBlocked ? '#CCC' : '#FF3B30';
-                    slot.style.opacity = isGlobalBlocked ? '0.6' : '1';
-                }
-
-                slot.innerHTML = `
-                    <div style="font-weight: 700;">${time}</div>
-                    <div style="font-size: 0.7rem; opacity: 0.7;">${isAppointed ? 'Ocupado' : isGlobalBlocked ? 'Fuera Horario' : isBlockedByDay ? 'Bloqueado' : 'Libre'}</div>
-                    <button onclick="toggleBlock('${time}', ${!!isBlockedByDay})" style="margin-top: 8px; width: 100%; font-size: 0.6rem; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: white; cursor: pointer;" ${isGlobalBlocked ? 'disabled' : ''}>
-                        ${isBlockedByDay ? 'Quitar Bloqueo' : 'Bloquear'}
-                    </button>
-                `;
-                grid.appendChild(slot);
-            });
-        }
-
-        function renderAppointments() {
-            const list = document.getElementById('admin-appointments-list');
-            list.innerHTML = '';
-
-            const activeApps = currentData.appointments
-                .filter(a => a.status === 'confirmed')
-                .sort((a, b) => a.time.localeCompare(b.time));
-
-            if (activeApps.length === 0) {
-                list.innerHTML = '<p style="font-size: 0.9rem; color: var(--text-muted);">No hay citas para este día.</p>';
-                return;
-            }
-
-            activeApps.forEach(app => {
-                const card = document.createElement('div');
-                card.className = 'pro-card';
-                card.style.marginBottom = '12px';
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between;">
-                         <div>
-                            <div class="time">${app.time}</div>
-                            <div class="name">${app.patientName}</div>
-                            <div class="service">${app.serviceName}</div>
-                            ${app.patientRut ? `<div style="font-size: 0.8rem; opacity: 0.6;">RUT: ${app.patientRut}</div>` : ''}
-                            <div style="font-size: 0.8rem; opacity: 0.6;">Tel: ${app.patientPhone || 'No registrado'}</div>
-                         </div>
-                         <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <button onclick="openEdit('${app.id}')" style="background: var(--primary-soft); color: var(--primary); border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Editar</button>
-                            <button onclick="cancelApp('${app.id}')" style="background: #FEEBEB; color: #FF3B30; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Cancelar</button>
-                         </div>
-                    </div>
-                `;
-                list.appendChild(card);
-            });
-        }
-
-        window.toggleBlock = async function (time, currentlyBlocked) {
-            const date = picker.value;
-            if (currentlyBlocked) {
-                const b = currentData.blocks.find(b => b.time === time || b.time === 'all');
-                if (b) await deleteDoc(doc(db, "blocks", b.id));
-            } else {
-                await setDoc(doc(db, "blocks", `${date}_${time}`), {
-                    date: date,
-                    time: time,
-                    createdAt: new Date()
-                });
-            }
-        };
-
-        window.blockDay = async function () {
-            const date = picker.value;
-            await setDoc(doc(db, "blocks", `${date}_all`), {
-                date: date,
-                time: "all",
-                createdAt: new Date()
-            });
-        };
-
-        window.unblockDay = async function () {
-            const date = picker.value;
-            const q = query(collection(db, "blocks"), where("date", "==", date));
-            const snap = await getDocs(q);
-            const batch = writeBatch(db);
-            snap.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-        };
-
-        window.openEdit = function (id) {
-            // Find in currentData OR fetch if necessary (since today tab might have different data)
-            // To simplify, we'll fetch the doc directly if not found in currentData
-            const app = currentData.appointments.find(a => a.id === id);
-            if (!app) {
-                // If it's from the "Today" tab and not selected in picker, we'll need to fetch it
-                // or just rely on the fact that currentData might not have it.
-                // Let's use a simpler approach: the "Today" listenToday already has the data.
-                // For now, we'll assume it's in currentData for simplicity or fetch it.
-            }
-
-            document.getElementById('edit-id').value = id;
-            if (app) {
-                document.getElementById('edit-name').value = app.patientName || '';
-                document.getElementById('edit-phone').value = app.patientPhone || '';
-                document.getElementById('edit-rut').value = app.patientRut || '';
-                document.getElementById('edit-time').value = app.time;
-            }
-
-            document.getElementById('edit-modal').style.display = 'flex';
-        }
-
-        window.closeModal = function () {
-            document.getElementById('edit-modal').style.display = 'none';
-        }
-
-        window.saveEdit = async function () {
-            const id = document.getElementById('edit-id').value;
-            const updates = {
-                patientName: document.getElementById('edit-name').value,
-                patientPhone: document.getElementById('edit-phone').value,
-                patientRut: document.getElementById('edit-rut').value,
-                time: document.getElementById('edit-time').value
-            };
-
-            const btn = document.querySelector('#edit-modal .btn-primary:last-child');
-            btn.disabled = true;
-            btn.innerText = 'Guardando...';
-
-            try {
-                await updateDoc(doc(db, "appointments", id), updates);
-                closeModal();
-            } catch (e) {
-                console.error("Error updating appointment:", e);
-                alert("Hubo un error al actualizar la cita.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Guardar Cambios';
-            }
-        }
-
-        window.cancelApp = async function (id) {
-            if (confirm(`¿Estás seguro de que deseas cancelar esta cita?`)) {
-                await deleteDoc(doc(db, "appointments", id));
-                if (confirm("¿Deseas enviar un aviso de cancelación por WhatsApp?")) {
-                    alert("Aviso: El mensaje se abrirá en WhatsApp.");
-                    // In a real app we'd get the phone number here. 
-                    // Simplified for the unified view.
-                }
-            }
-        };
-
-        // --- Tabs Logic ---
-        window.switchAdminTab = function (tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            const btn = document.getElementById(`tab-${tab}`);
-            if (btn) btn.classList.add('active');
-
-            document.getElementById('tab-content-today').style.display = tab === 'today' ? 'block' : 'none';
-            document.getElementById('tab-content-agenda').style.display = tab === 'agenda' ? 'block' : 'none';
-            document.getElementById('tab-content-reminders').style.display = tab === 'reminders' ? 'block' : 'none';
-            document.getElementById('tab-content-settings').style.display = tab === 'settings' ? 'block' : 'none';
-
-            const titles = { 'today': 'Agenda de Hoy', 'agenda': 'Otros Días', 'reminders': 'Avisos de Pacientes', 'settings': 'Configuración General' };
-            const subs = { 'today': 'Tus citas para este día', 'agenda': 'Gestiona bloqueos y fechas futuras', 'reminders': 'Seguimiento y recordatorios', 'settings': 'Horarios globales de atención' };
-
-            document.getElementById('dashboard-title').innerText = titles[tab];
-            document.getElementById('dashboard-subtitle').innerText = subs[tab];
-
-            if (tab === 'agenda') fetchMonthAppointments();
-            if (tab === 'reminders') loadReminders();
-            if (tab === 'settings') loadSettings();
-        }
-
-        // Logic for Settings
-        function fillSettingsSelects() {
-            const selects = ['set-start', 'set-end', 'set-lunch-start', 'set-lunch-end'];
-            selects.forEach(id => {
-                const s = document.getElementById(id);
-                s.innerHTML = '<option value="">Ninguno</option>';
-                timeSlots.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t;
-                    opt.innerText = t;
-                    s.appendChild(opt);
-                });
-            });
-        }
-
-        async function loadSettings() {
-            fillSettingsSelects();
-            try {
-                const docSnap = await getDocs(query(collection(db, "settings")));
-                const hoursDoc = docSnap.docs.find(d => d.id === "business_hours");
-                if (hoursDoc) {
-                    const data = hoursDoc.data();
-                    configData = data;
-                    document.getElementById('set-start').value = data.startTime || "";
-                    document.getElementById('set-end').value = data.endTime || "";
-                    document.getElementById('set-lunch-start').value = data.lunchStart || "";
-                    document.getElementById('set-lunch-end').value = data.lunchEnd || "";
-                    renderAll(); // Refresh grids if settings change
-                }
-            } catch (e) { console.error("Error loading settings:", e); }
-        }
-
-        window.saveSettings = async function () {
-            const btn = document.querySelector('#tab-content-settings .btn-primary');
-            btn.disabled = true;
-            btn.innerText = 'Guardando...';
-
-            try {
-                await setDoc(doc(db, "settings", "business_hours"), {
-                    startTime: document.getElementById('set-start').value,
-                    endTime: document.getElementById('set-end').value,
-                    lunchStart: document.getElementById('set-lunch-start').value,
-                    lunchEnd: document.getElementById('set-lunch-end').value,
-                    updatedAt: new Date()
-                });
-                alert("Configuración guardada correctamente");
-            } catch (e) {
-                console.error("Error saving settings:", e);
-                alert("Error al guardar");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Guardar Configuración';
-            }
-        }
-
-        async function loadReminders() {
-            const container = document.getElementById('reminders-list');
-            container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Cargando pacientes para recordatorios...</p>';
-
-            try {
-                const q = query(collection(db, "appointments"), where("status", "==", "confirmed"));
-                const snap = await getDocs(q);
-                const allApps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                const now = new Date();
-                const formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-
-                const rangeDates = [];
-                for (let i = 0; i < 5; i++) {
-                    const d = new Date();
-                    d.setDate(d.getDate() + i);
-                    rangeDates.push(formatDate(d));
-                }
-
-                const reminders = [];
-                allApps.forEach(app => {
-                    const dateIdx = rangeDates.indexOf(app.date);
-                    if (dateIdx === -1) return;
-
-                    if (dateIdx === 0) { // Today
-                        const [h, m] = app.time.split(':').map(Number);
-                        const appTime = new Date();
-                        appTime.setHours(h, m, 0, 0);
-                        const diffHours = (appTime - now) / (1000 * 60 * 60);
-                        if (diffHours > 0) {
-                            reminders.push({ ...app, type: diffHours <= 3 ? '2h' : 'today', dayOffset: 0 });
-                        }
-                    } else {
-                        reminders.push({ ...app, type: dateIdx === 1 ? '24h' : 'future', dayOffset: dateIdx });
-                    }
-                });
-
-                if (reminders.length === 0) {
-                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No hay recordatorios pendientes.</p>';
-                    return;
-                }
-
-                container.innerHTML = '<h3>Próximos Recordatorios (5 días)</h3>';
-                reminders.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).forEach(app => {
-                    const card = document.createElement('div');
-                    card.className = 'pro-card';
-                    card.style.marginBottom = '12px';
-
-                    const dayNamesShort = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-                    const appDateObj = new Date(app.date + 'T00:00:00');
-                    const dayName = dayNamesShort[appDateObj.getDay()];
-
-                    let label = ''; let color = ''; let msg = '';
-                    if (app.dayOffset === 0) {
-                        label = app.type === '2h' ? 'Hoy (Pronto)' : 'Hoy';
-                        color = app.type === '2h' ? '#FF9500' : '#007AFF';
-                        msg = `Hola ${app.patientName}, te recordamos tu hora de hoy a las ${app.time}.`;
-                    } else if (app.dayOffset === 1) {
-                        label = 'Mañana'; color = '#34C759';
-                        msg = `Hola ${app.patientName}, te recordamos tu hora para mañana ${dayName} a las ${app.time}.`;
-                    } else {
-                        label = `En ${app.dayOffset} días (${dayName})`; color = '#5856D6';
-                        msg = `Hola ${app.patientName}, te recordamos tu cita del ${dayName} ${app.date} a las ${app.time}.`;
-                    }
-
-                    card.style.borderLeft = `4px solid ${color}`;
-                    card.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                            <div>
-                                <span style="font-size: 0.7rem; font-weight: 700; color: ${color}; text-transform: uppercase;">${label}</span>
-                                <div style="font-weight: 700; font-size: 1.1rem; margin: 4px 0;">${app.time} - ${app.patientName}</div>
-                                <div style="font-size: 0.8rem; opacity: 0.7;">${app.serviceName} (${app.date})</div>
-                            </div>
-                            <a href="https://wa.me/56${app.patientPhone}?text=${encodeURIComponent(msg)}" target="_blank" class="btn-primary" style="margin: 0; padding: 8px 12px; font-size: 0.8rem; background: #25D366; text-decoration: none;">WhatsApp</a>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-            } catch (e) { console.error(e); }
-        }
-
-        // Initial load
-        loadSettings();
-        listenToday();
-        loadDateData();
-        listenMonthIndicators();
-    </script>
+    <script type="module" src="js/admin.js"></script>
 </body>
 
 </html>
