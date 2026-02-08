@@ -462,15 +462,16 @@ async function loadReminders() {
             rangeDates.push(formatDateYMD(d));
         }
 
-        // Optimized: only fetch appointments in the date range instead of ALL confirmed
+        // Fetch appointments in date range, filter status in JS to avoid composite index
         const q = query(
             collection(db, "appointments"),
-            where("status", "==", STATUS.CONFIRMED),
             where("date", ">=", rangeDates[0]),
             where("date", "<=", rangeDates[rangeDates.length - 1])
         );
         const snap = await getDocs(q);
-        const allApps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const allApps = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(a => a.status === STATUS.CONFIRMED);
 
         const reminders = [];
         allApps.forEach(app => {
