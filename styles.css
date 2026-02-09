@@ -1043,3 +1043,101 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* ── Header professional name ───────────────────────── */
+.header-pro-name {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* ── Textarea (notes/observations) ──────────────────── */
+.form-group textarea {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* ── Appointment notes display ──────────────────────── */
+.appointment-notes {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: var(--primary-soft);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.notes-icon {
+    margin-right: 4px;
+}
+
+/* ── Setup page: professional list ──────────────────── */
+.pro-list-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pro-list-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.pro-list-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.pro-list-slug {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.pro-list-links {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.pro-link {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--primary-soft);
+}
+
+.pro-link--admin {
+    color: var(--text-main);
+    background: var(--bg-main);
+}
+
+.pro-list-actions {
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+/* ── Delete warning ─────────────────────────────────── */
+.delete-warning {
+    font-size: 0.9rem;
+    color: var(--danger);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}

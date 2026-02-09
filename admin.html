@@ -13,7 +13,7 @@
         <header class="pro-header">
             <div class="pro-header-inner">
                 <div class="logo">FacilPyme <span class="pro-label">Pro</span></div>
-                <a href="index.html?view=pro" class="btn-agendar" id="btn-agendar-link" style="display:none;">
+                <a href="#" class="btn-agendar" id="btn-agendar-link" style="display:none;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"
                         stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -30,35 +30,37 @@
                 <div class="pin-container">
                     <div class="pin-icon">&#128274;</div>
                     <h1>Acceso Profesional</h1>
-                    <p class="subtitle">Ingresa tu PIN para continuar</p>
+                    <p class="subtitle" id="pin-pro-name"></p>
                     <div class="form-group">
                         <input type="password" id="pin-input" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric" autocomplete="off">
                     </div>
                     <button class="btn-primary" id="btn-pin-submit">Ingresar</button>
-                    <p class="pin-hint">PIN por defecto: 1234</p>
+                </div>
+            </section>
+
+            <!-- Error: no professional -->
+            <section id="error-screen" class="fade-in" style="display: none;">
+                <div class="pin-container">
+                    <div class="pin-icon">&#9888;&#65039;</div>
+                    <h1>Profesional no encontrado</h1>
+                    <p class="subtitle">La URL no contiene un identificador de profesional v&aacute;lido.</p>
                 </div>
             </section>
 
             <!-- Dashboard (hidden until PIN verified) -->
             <section id="view-admin" class="fade-in" style="display: none;">
-                <h1 id="dashboard-title">Panel de Control</h1>
-                <p class="subtitle" id="dashboard-subtitle">Administra tu agenda y pacientes</p>
+                <h1 id="dashboard-title">Agenda</h1>
+                <p class="subtitle" id="dashboard-subtitle">Gestiona bloqueos y fechas</p>
 
                 <!-- Tabs -->
                 <div class="tabs-bar">
-                    <button data-tab="today" class="tab-btn active">Hoy</button>
-                    <button data-tab="agenda" class="tab-btn">Agenda</button>
+                    <button data-tab="agenda" class="tab-btn active">Agenda</button>
                     <button data-tab="reminders" class="tab-btn">Avisos</button>
                     <button data-tab="settings" class="tab-btn">Config</button>
                 </div>
 
-                <!-- Tab: Today -->
-                <div id="tab-content-today">
-                    <div id="today-agenda-list" class="agenda-list"></div>
-                </div>
-
-                <!-- Tab: Calendar/Others -->
-                <div id="tab-content-agenda" style="display: none;">
+                <!-- Tab: Calendar/Agenda -->
+                <div id="tab-content-agenda">
                     <div class="calendar-wrapper">
                         <div id="calendar-root-admin"></div>
                         <input type="hidden" id="admin-date-picker">
@@ -136,7 +138,7 @@
         </main>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- Edit Modal (with notes field) -->
     <div id="edit-modal" class="modal-overlay">
         <div class="modal-content">
             <h2>Editar Cita</h2>
@@ -157,6 +159,10 @@
             <div class="form-group">
                 <label>Horario</label>
                 <select id="edit-time"></select>
+            </div>
+            <div class="form-group">
+                <label>Observaciones del profesional</label>
+                <textarea id="edit-notes" rows="3" placeholder="Notas, observaciones o indicaciones..."></textarea>
             </div>
 
             <div class="modal-actions">

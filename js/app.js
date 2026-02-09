@@ -1,11 +1,16 @@
 import { db } from './firebase-init.js';
 import {
-    collection, addDoc, getDocs, query, where, serverTimestamp
+    addDoc, getDocs, query, where, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     STATUS, TIME_SLOTS, sanitize, showToast, validateRut, validateEmail,
-    renderCalendar, loadBusinessSettings, isOutsideBusinessHours, formatDateYMD
+    renderCalendar, isOutsideBusinessHours, formatDateYMD,
+    apptCollection, blocksCollection, loadProfessionalSettings, loadProfessionalProfile
 } from './shared.js';
+
+// ── Read professional ID from URL ───────────────────────────
+const params = new URLSearchParams(window.location.search);
+const PRO_ID = params.get('pro');
 
 // ── State ──────────────────────────────────────────────────
 let bookingData = { service: '', date: '', time: '', name: '', phone: '', email: '' };
@@ -31,12 +36,39 @@ function goTo(screenId) {
     }
 }
 
+// ── Validate professional exists ───────────────────────────
+async function init() {
+    if (!PRO_ID) {
+        goTo('screen-error');
+        return;
+    }
+
+    const profile = await loadProfessionalProfile(db, PRO_ID);
+    if (!profile) {
+        goTo('screen-error');
+        return;
+    }
+
+    // Show professional name in header
+    const headerName = document.getElementById('header-pro-name');
+    if (headerName) headerName.textContent = profile.name;
+
+    configData = await loadProfessionalSettings(db, PRO_ID);
+    renderPatientCalendar();
+
+    // Handle #cancel hash
+    if (window.location.hash === '#cancel') {
+        goTo('screen-cancel');
+    } else {
+        goTo('screen-start');
+    }
+}
+
 // ── Back buttons ───────────────────────────────────────────
 document.getElementById('btn-back-services')?.addEventListener('click', () => goTo('screen-start'));
 document.getElementById('btn-back-datetime')?.addEventListener('click', () => goTo('screen-services'));
 document.getElementById('btn-back-data')?.addEventListener('click', () => goTo('screen-datetime'));
 document.getElementById('btn-back-rut')?.addEventListener('click', () => {
-    // Re-enable the "Siguiente" button when going back
     const btn = document.querySelector('#screen-data .btn-primary');
     if (btn) { btn.disabled = false; btn.innerText = 'Siguiente'; }
     goTo('screen-data');
@@ -45,9 +77,7 @@ document.getElementById('btn-back-rut')?.addEventListener('click', () => {
 // ── Service selection ──────────────────────────────────────
 document.querySelectorAll('.selectable-card').forEach(card => {
     card.addEventListener('click', () => {
-        const name = card.dataset.service;
-        const duration = card.dataset.duration;
-        bookingData.service = name;
+        bookingData.service = card.dataset.service;
         document.querySelectorAll('.selectable-card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         btnServices.disabled = false;
@@ -107,11 +137,11 @@ async function checkAvailability() {
 
     try {
         const qApp = query(
-            collection(db, "appointments"),
+            apptCollection(db, PRO_ID),
             where("date", "==", date),
             where("status", "==", STATUS.CONFIRMED)
         );
-        const qBlock = query(collection(db, "blocks"), where("date", "==", date));
+        const qBlock = query(blocksCollection(db, PRO_ID), where("date", "==", date));
 
         const [snapApp, snapBlock] = await Promise.all([getDocs(qApp), getDocs(qBlock)]);
 
@@ -210,7 +240,7 @@ async function saveRutAndFinish() {
     try {
         // Race condition check: verify slot is still available before saving
         const checkQuery = query(
-            collection(db, "appointments"),
+            apptCollection(db, PRO_ID),
             where("date", "==", bookingData.date),
             where("time", "==", bookingData.time),
             where("status", "==", STATUS.CONFIRMED)
@@ -225,7 +255,7 @@ async function saveRutAndFinish() {
             return;
         }
 
-        await addDoc(collection(db, "appointments"), {
+        await addDoc(apptCollection(db, PRO_ID), {
             serviceName: bookingData.service,
             date: bookingData.date,
             time: bookingData.time,
@@ -233,6 +263,7 @@ async function saveRutAndFinish() {
             patientPhone: bookingData.phone,
             patientEmail: bookingData.email,
             patientRut: rut,
+            notes: '',
             status: STATUS.CONFIRMED,
             createdAt: serverTimestamp()
         });
@@ -263,15 +294,5 @@ function confirmCancellation() {
     goTo('screen-cancel-success');
 }
 
-// ── Handle #cancel hash ────────────────────────────────────
-if (window.location.hash === '#cancel') {
-    goTo('screen-cancel');
-}
-
-// ── Initialize ─────────────────────────────────────────────
-async function init() {
-    configData = await loadBusinessSettings(db);
-    renderPatientCalendar();
-}
-
+// ── Start ──────────────────────────────────────────────────
 init();

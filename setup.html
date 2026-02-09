@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FacilPyme - Administrar Profesionales</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="pro-header">
+            <div class="pro-header-inner">
+                <div class="logo">FacilPyme <span class="pro-label">Setup</span></div>
+            </div>
+        </header>
+
+        <main id="setup-app">
+            <!-- Master PIN Screen -->
+            <section id="setup-pin-screen" class="fade-in">
+                <div class="pin-container">
+                    <div class="pin-icon">&#9881;&#65039;</div>
+                    <h1>Panel de Administraci&oacute;n</h1>
+                    <p class="subtitle">Ingresa el PIN maestro para gestionar profesionales</p>
+                    <div class="form-group">
+                        <input type="password" id="master-pin-input" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric" autocomplete="off">
+                    </div>
+                    <button class="btn-primary" id="btn-master-pin">Ingresar</button>
+                    <p class="pin-hint">PIN maestro por defecto: 0000</p>
+                </div>
+            </section>
+
+            <!-- Dashboard -->
+            <section id="setup-dashboard" class="fade-in" style="display: none;">
+                <h1>Gesti&oacute;n de Profesionales</h1>
+                <p class="subtitle">Crea y administra cuentas para tu equipo</p>
+
+                <!-- Create Professional Form -->
+                <div class="pro-card settings-card" id="create-pro-card">
+                    <h3>Nuevo Profesional</h3>
+                    <div class="form-group">
+                        <label>Nombre completo</label>
+                        <input type="text" id="pro-name" placeholder="Ej: Dra. Mar&iacute;a L&oacute;pez">
+                    </div>
+                    <div class="form-group">
+                        <label>Identificador (slug)
+                            <span class="label-hint">Se usar&aacute; en la URL. Solo letras min&uacute;sculas, n&uacute;meros y guiones.</span>
+                        </label>
+                        <input type="text" id="pro-slug" placeholder="Ej: dra-maria-lopez">
+                    </div>
+                    <div class="form-group">
+                        <label>PIN de acceso (4-6 d&iacute;gitos)</label>
+                        <input type="password" id="pro-pin" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric">
+                    </div>
+                    <button class="btn-primary" id="btn-create-pro">Crear Profesional</button>
+                </div>
+
+                <!-- List of Professionals -->
+                <h3 class="section-title" style="margin-top: 24px;">Profesionales Registrados</h3>
+                <div id="professionals-list"></div>
+
+                <!-- Change Master PIN -->
+                <div class="pro-card settings-card" style="margin-top: 24px;">
+                    <h3>Cambiar PIN Maestro</h3>
+                    <div class="form-group">
+                        <label>Nuevo PIN (4-6 d&iacute;gitos)</label>
+                        <input type="password" id="new-master-pin" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmar PIN</label>
+                        <input type="password" id="confirm-master-pin" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric">
+                    </div>
+                    <button class="btn-primary" id="btn-change-master-pin">Cambiar PIN Maestro</button>
+                </div>
+
+                <button class="btn-secondary btn-logout" id="btn-setup-logout">Cerrar Sesi&oacute;n</button>
+            </section>
+        </main>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Eliminar Profesional</h2>
+            <p class="delete-warning">&iquest;Est&aacute;s seguro? Se eliminar&aacute; el profesional y todas sus citas y bloqueos. Esta acci&oacute;n no se puede deshacer.</p>
+            <input type="hidden" id="delete-pro-id">
+            <div class="modal-actions">
+                <button class="btn-primary btn-modal-cancel" id="btn-delete-cancel">Cancelar</button>
+                <button class="btn-primary btn-danger" id="btn-delete-confirm">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script type="module" src="js/setup.js"></script>
+</body>
+
+</html>

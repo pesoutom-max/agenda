@@ -12,11 +12,28 @@
     <div class="app-container">
         <header>
             <div class="logo">FacilPyme</div>
+            <p class="header-pro-name" id="header-pro-name"></p>
         </header>
 
         <main id="app-content">
+            <!-- Screen: Loading -->
+            <section id="screen-loading" class="fade-in">
+                <div class="pin-container">
+                    <p class="text-muted">Cargando...</p>
+                </div>
+            </section>
+
+            <!-- Screen: Error (no professional) -->
+            <section id="screen-error" class="fade-in" style="display: none;">
+                <div class="pin-container">
+                    <div class="pin-icon">&#9888;&#65039;</div>
+                    <h1>P&aacute;gina no disponible</h1>
+                    <p class="subtitle">Este enlace de reserva no es v&aacute;lido o el profesional no existe.</p>
+                </div>
+            </section>
+
             <!-- Screen 1: Start -->
-            <section id="screen-start" class="fade-in">
+            <section id="screen-start" class="fade-in" style="display: none;">
                 <h1>Reserva tu hora</h1>
                 <p class="subtitle">Elige el horario que m&aacute;s te acomode</p>
                 <div class="start-icon">
