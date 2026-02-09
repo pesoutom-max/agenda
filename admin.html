@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>FacilPyme Pro - Administrar Calendario</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -13,7 +13,7 @@
         <header class="pro-header">
             <div class="pro-header-inner">
                 <div class="logo">FacilPyme <span class="pro-label">Pro</span></div>
-                <a href="index.html?view=pro" class="btn-agendar">
+                <a href="index.html?view=pro" class="btn-agendar" id="btn-agendar-link" style="display:none;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"
                         stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -25,16 +25,31 @@
         </header>
 
         <main id="admin-app">
-            <section id="view-admin" class="fade-in">
+            <!-- PIN Screen -->
+            <section id="pin-screen" class="fade-in">
+                <div class="pin-container">
+                    <div class="pin-icon">&#128274;</div>
+                    <h1>Acceso Profesional</h1>
+                    <p class="subtitle">Ingresa tu PIN para continuar</p>
+                    <div class="form-group">
+                        <input type="password" id="pin-input" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric" autocomplete="off">
+                    </div>
+                    <button class="btn-primary" id="btn-pin-submit">Ingresar</button>
+                    <p class="pin-hint">PIN por defecto: 1234</p>
+                </div>
+            </section>
+
+            <!-- Dashboard (hidden until PIN verified) -->
+            <section id="view-admin" class="fade-in" style="display: none;">
                 <h1 id="dashboard-title">Panel de Control</h1>
                 <p class="subtitle" id="dashboard-subtitle">Administra tu agenda y pacientes</p>
 
                 <!-- Tabs -->
                 <div class="tabs-bar">
-                    <button data-tab="today" class="tab-btn active">&#128197; Hoy</button>
-                    <button data-tab="agenda" class="tab-btn">&#128197;&#65039; Otros</button>
-                    <button data-tab="reminders" class="tab-btn">&#128276; Avisos</button>
-                    <button data-tab="settings" class="tab-btn">&#9881;&#65039; Conf</button>
+                    <button data-tab="today" class="tab-btn active">Hoy</button>
+                    <button data-tab="agenda" class="tab-btn">Agenda</button>
+                    <button data-tab="reminders" class="tab-btn">Avisos</button>
+                    <button data-tab="settings" class="tab-btn">Config</button>
                 </div>
 
                 <!-- Tab: Today -->
@@ -44,7 +59,7 @@
 
                 <!-- Tab: Calendar/Others -->
                 <div id="tab-content-agenda" style="display: none;">
-                    <div style="margin-bottom: 24px;">
+                    <div class="calendar-wrapper">
                         <div id="calendar-root-admin"></div>
                         <input type="hidden" id="admin-date-picker">
                     </div>
@@ -54,12 +69,12 @@
                         <button class="btn-primary btn-unblock" id="btn-unblock-day">Limpiar D&iacute;a</button>
                     </div>
 
-                    <div class="calendar-grid" id="admin-time-grid"></div>
+                    <div class="admin-time-grid-container">
+                        <div class="time-grid" id="admin-time-grid"></div>
+                    </div>
 
-                    <div id="appointments-section" style="margin-top: 32px; display: none;">
-                        <h3 style="font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                            &#128203; Pacientes del d&iacute;a
-                        </h3>
+                    <div id="appointments-section" class="appointments-section-hidden">
+                        <h3 class="section-title">Pacientes del d&iacute;a</h3>
                         <div id="admin-appointments-list"></div>
                     </div>
                 </div>
@@ -75,13 +90,13 @@
                             <select id="set-start"></select>
                         </div>
                         <div class="form-group">
-                            <label>Hora de Cierre (&Uacute;ltima hora disponible)</label>
+                            <label>Hora de Cierre</label>
                             <select id="set-end"></select>
                         </div>
 
                         <hr class="settings-divider">
 
-                        <h4 style="margin-bottom: 12px;">Descanso / Colaci&oacute;n</h4>
+                        <h4 class="settings-subtitle">Descanso / Colaci&oacute;n</h4>
                         <div class="settings-row">
                             <div class="form-group">
                                 <label>Inicia</label>
@@ -95,6 +110,22 @@
 
                         <button class="btn-primary" id="btn-save-settings">Guardar Configuraci&oacute;n</button>
                     </div>
+
+                    <div class="pro-card settings-card" style="margin-top: 16px;">
+                        <h3>Cambiar PIN de Acceso</h3>
+                        <p class="settings-description">Modifica el PIN para ingresar al panel.</p>
+                        <div class="form-group">
+                            <label>Nuevo PIN (4-6 d&iacute;gitos)</label>
+                            <input type="password" id="new-pin" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirmar PIN</label>
+                            <input type="password" id="confirm-pin" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric">
+                        </div>
+                        <button class="btn-primary" id="btn-change-pin">Cambiar PIN</button>
+                    </div>
+
+                    <button class="btn-secondary btn-logout" id="btn-logout">Cerrar Sesi&oacute;n</button>
                 </div>
 
                 <!-- Tab: Reminders -->
@@ -130,7 +161,7 @@
 
             <div class="modal-actions">
                 <button class="btn-primary btn-modal-cancel" id="btn-modal-cancel">Cancelar</button>
-                <button class="btn-primary" id="btn-modal-save">Guardar Cambios</button>
+                <button class="btn-primary" id="btn-modal-save">Guardar</button>
             </div>
         </div>
     </div>
