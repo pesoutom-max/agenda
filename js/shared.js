@@ -1,4 +1,4 @@
-import { collection, getDocs, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, getDocs, getDoc, doc, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ── Constants ──────────────────────────────────────────────
 export const STATUS = {
@@ -17,6 +17,52 @@ const DAY_NAMES = ["L", "M", "M", "J", "V", "S", "D"];
 
 const DAY_NAMES_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 export { DAY_NAMES_SHORT };
+
+// ── Multi-tenant helpers ───────────────────────────────────
+export function proDoc(db, proId) {
+    return doc(db, "professionals", proId);
+}
+
+export function apptCollection(db, proId) {
+    return collection(db, "professionals", proId, "appointments");
+}
+
+export function blocksCollection(db, proId) {
+    return collection(db, "professionals", proId, "blocks");
+}
+
+export function apptDoc(db, proId, apptId) {
+    return doc(db, "professionals", proId, "appointments", apptId);
+}
+
+export function blockDoc(db, proId, blockId) {
+    return doc(db, "professionals", proId, "blocks", blockId);
+}
+
+// ── Load professional settings ─────────────────────────────
+export async function loadProfessionalSettings(db, proId) {
+    try {
+        const snap = await getDoc(proDoc(db, proId));
+        if (snap.exists()) {
+            const data = snap.data();
+            return data.settings || { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
+        }
+    } catch (e) {
+        console.error("Error loading professional settings:", e);
+    }
+    return { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
+}
+
+// ── Load professional profile ──────────────────────────────
+export async function loadProfessionalProfile(db, proId) {
+    try {
+        const snap = await getDoc(proDoc(db, proId));
+        if (snap.exists()) return { id: snap.id, ...snap.data() };
+    } catch (e) {
+        console.error("Error loading professional:", e);
+    }
+    return null;
+}
 
 // ── Sanitization (XSS prevention) ──────────────────────────
 export function sanitize(str) {
@@ -175,18 +221,6 @@ export function renderCalendar({
 
     html += `</div></div>`;
     rootElement.innerHTML = html;
-}
-
-// ── Load business settings from Firestore ──────────────────
-export async function loadBusinessSettings(db) {
-    try {
-        const snap = await getDocs(query(collection(db, "settings")));
-        const hoursDoc = snap.docs.find(d => d.id === "business_hours");
-        if (hoursDoc) return hoursDoc.data();
-    } catch (e) {
-        console.error("Error loading settings:", e);
-    }
-    return { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
 }
 
 // ── Check if time slot is outside business hours ───────────

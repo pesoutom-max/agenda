@@ -1,47 +1,71 @@
 import { db } from './firebase-init.js';
 import {
     collection, query, where, onSnapshot, doc, setDoc, deleteDoc,
-    getDocs, writeBatch, updateDoc
+    getDocs, writeBatch, updateDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     STATUS, TIME_SLOTS, sanitize, showToast, renderCalendar,
-    loadBusinessSettings, isOutsideBusinessHours, formatDateYMD,
-    populateTimeSelect, DAY_NAMES_SHORT
+    isOutsideBusinessHours, formatDateYMD, populateTimeSelect, DAY_NAMES_SHORT,
+    proDoc, apptCollection, blocksCollection, apptDoc, blockDoc,
+    loadProfessionalSettings, loadProfessionalProfile
 } from './shared.js';
 
+// ── Read professional ID from URL ───────────────────────────
+const params = new URLSearchParams(window.location.search);
+const PRO_ID = params.get('pro');
+
 // ── PIN Authentication ─────────────────────────────────────
-const PIN_SESSION_KEY = 'facilpyme_admin_auth';
-const DEFAULT_PIN = '1234';
+const PIN_SESSION_KEY = `facilpyme_admin_${PRO_ID}`;
 
 const pinScreen = document.getElementById('pin-screen');
+const errorScreen = document.getElementById('error-screen');
 const pinInput = document.getElementById('pin-input');
 const dashboard = document.getElementById('view-admin');
 const agendarLink = document.getElementById('btn-agendar-link');
 
-async function getStoredPin() {
-    try {
-        const snap = await getDocs(query(collection(db, "settings")));
-        const pinDoc = snap.docs.find(d => d.id === "admin_pin");
-        return pinDoc ? pinDoc.data().pin : DEFAULT_PIN;
-    } catch (e) {
-        console.error("Error fetching PIN:", e);
-        return DEFAULT_PIN;
+// ── Initialize: validate pro exists ────────────────────────
+async function init() {
+    if (!PRO_ID) {
+        pinScreen.style.display = 'none';
+        errorScreen.style.display = 'block';
+        return;
+    }
+
+    const profile = await loadProfessionalProfile(db, PRO_ID);
+    if (!profile) {
+        pinScreen.style.display = 'none';
+        errorScreen.style.display = 'block';
+        return;
+    }
+
+    // Show professional name on PIN screen
+    const pinProName = document.getElementById('pin-pro-name');
+    if (pinProName) pinProName.textContent = `Ingresa tu PIN, ${profile.name}`;
+
+    // Set agendar link
+    if (agendarLink) {
+        const base = window.location.pathname.replace('admin.html', '');
+        agendarLink.href = `${base}index.html?pro=${PRO_ID}`;
+    }
+
+    // Check session
+    if (sessionStorage.getItem(PIN_SESSION_KEY) === 'true') {
+        showDashboard();
     }
 }
 
 async function verifyPin() {
     const entered = pinInput.value.trim();
-    if (!entered) {
-        showToast("Ingresa tu PIN.", "error");
-        return;
-    }
+    if (!entered) { showToast("Ingresa tu PIN.", "error"); return; }
 
     const btn = document.getElementById('btn-pin-submit');
     btn.disabled = true;
     btn.innerText = 'Verificando...';
 
     try {
-        const storedPin = await getStoredPin();
+        const profile = await loadProfessionalProfile(db, PRO_ID);
+        const storedPin = profile ? profile.pin : null;
+
         if (entered === storedPin) {
             sessionStorage.setItem(PIN_SESSION_KEY, 'true');
             showDashboard();
@@ -66,35 +90,19 @@ function showDashboard() {
 }
 
 document.getElementById('btn-pin-submit')?.addEventListener('click', verifyPin);
-pinInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') verifyPin();
-});
-
-// Check session on load
-if (sessionStorage.getItem(PIN_SESSION_KEY) === 'true') {
-    showDashboard();
-}
+pinInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') verifyPin(); });
 
 // ── Change PIN ─────────────────────────────────────────────
 document.getElementById('btn-change-pin')?.addEventListener('click', async () => {
     const newPin = document.getElementById('new-pin').value.trim();
     const confirmPin = document.getElementById('confirm-pin').value.trim();
 
-    if (newPin.length < 4) {
-        showToast("El PIN debe tener al menos 4 d\u00edgitos.", "error");
-        return;
-    }
-    if (newPin !== confirmPin) {
-        showToast("Los PIN no coinciden.", "error");
-        return;
-    }
-    if (!/^\d+$/.test(newPin)) {
-        showToast("El PIN debe contener solo n\u00fameros.", "error");
-        return;
-    }
+    if (newPin.length < 4) { showToast("El PIN debe tener al menos 4 d\u00edgitos.", "error"); return; }
+    if (newPin !== confirmPin) { showToast("Los PIN no coinciden.", "error"); return; }
+    if (!/^\d+$/.test(newPin)) { showToast("El PIN debe contener solo n\u00fameros.", "error"); return; }
 
     try {
-        await setDoc(doc(db, "settings", "admin_pin"), { pin: newPin, updatedAt: new Date() });
+        await updateDoc(proDoc(db, PRO_ID), { pin: newPin });
         showToast("PIN actualizado correctamente.", "success");
         document.getElementById('new-pin').value = '';
         document.getElementById('confirm-pin').value = '';
@@ -118,7 +126,6 @@ document.getElementById('btn-logout')?.addEventListener('click', () => {
 const TODAY_STR = formatDateYMD(new Date());
 let currentMonth = new Date();
 let currentData = { appointments: [], blocks: [] };
-let todayAppointments = [];
 let appointmentsByDay = {};
 let blocksByDay = {};
 let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
@@ -132,7 +139,6 @@ let dashboardInitialized = false;
 const picker = document.getElementById('admin-date-picker');
 const calendarRootAdmin = document.getElementById('calendar-root-admin');
 const adminTimeGrid = document.getElementById('admin-time-grid');
-const todayAgendaList = document.getElementById('today-agenda-list');
 const appointmentsSection = document.getElementById('appointments-section');
 const adminAppointmentsList = document.getElementById('admin-appointments-list');
 const remindersList = document.getElementById('reminders-list');
@@ -143,8 +149,7 @@ async function initDashboard() {
     dashboardInitialized = true;
 
     picker.value = TODAY_STR;
-    configData = await loadBusinessSettings(db);
-    listenToday();
+    configData = await loadProfessionalSettings(db, PRO_ID);
     loadDateData();
     listenMonthIndicators();
 }
@@ -157,13 +162,13 @@ function loadDateData() {
     if (unsubDateApp) unsubDateApp();
     if (unsubDateBlock) unsubDateBlock();
 
-    const qApp = query(collection(db, "appointments"), where("date", "==", date));
+    const qApp = query(apptCollection(db, PRO_ID), where("date", "==", date));
     unsubDateApp = onSnapshot(qApp, (snap) => {
         currentData.appointments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderAll();
     });
 
-    const qBlock = query(collection(db, "blocks"), where("date", "==", date));
+    const qBlock = query(blocksCollection(db, PRO_ID), where("date", "==", date));
     unsubDateBlock = onSnapshot(qBlock, (snap) => {
         currentData.blocks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderAll();
@@ -179,9 +184,9 @@ function listenMonthIndicators() {
     const startStr = `${year}-${month}-01`;
     const endStr = `${year}-${month}-31`;
 
-    const qApp = query(collection(db, "appointments"),
+    const qApp = query(apptCollection(db, PRO_ID),
         where("date", ">=", startStr), where("date", "<=", endStr));
-    const qBlock = query(collection(db, "blocks"),
+    const qBlock = query(blocksCollection(db, PRO_ID),
         where("date", ">=", startStr), where("date", "<=", endStr));
 
     const unsubApp = onSnapshot(qApp, (snap) => {
@@ -225,55 +230,11 @@ function renderAdminCalendar() {
     });
 }
 
-// ── Today tab ──────────────────────────────────────────────
-function listenToday() {
-    const q = query(collection(db, "appointments"), where("date", "==", TODAY_STR));
-    onSnapshot(q, (snap) => {
-        todayAppointments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderTodayTab();
-    });
-}
-
 // ── Render functions ───────────────────────────────────────
 function renderAll() {
     renderTimeGrid();
     renderAppointments();
     appointmentsSection.classList.remove('appointments-section-hidden');
-}
-
-function renderTodayTab() {
-    todayAgendaList.innerHTML = '';
-    const sorted = todayAppointments
-        .filter(a => a.status === STATUS.CONFIRMED)
-        .sort((a, b) => a.time.localeCompare(b.time));
-
-    if (sorted.length === 0) {
-        todayAgendaList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state__icon">\u2615</div>
-                <p>No hay citas agendadas para hoy.</p>
-            </div>`;
-        return;
-    }
-
-    sorted.forEach(app => {
-        const card = document.createElement('div');
-        card.className = 'pro-card';
-        card.innerHTML = `
-            <div class="appointment-row">
-                <div class="appointment-info">
-                    <div class="appointment-time">${sanitize(app.time)}</div>
-                    <div class="appointment-name">${sanitize(app.patientName)}</div>
-                    <div class="appointment-service">${sanitize(app.serviceName)}</div>
-                </div>
-                <div class="appointment-actions">
-                    <button class="btn-edit" data-id="${app.id}">Editar</button>
-                    <button class="btn-cancel-app" data-id="${app.id}">X</button>
-                </div>
-            </div>
-        `;
-        todayAgendaList.appendChild(card);
-    });
 }
 
 function renderTimeGrid() {
@@ -322,6 +283,11 @@ function renderAppointments() {
     activeApps.forEach(app => {
         const card = document.createElement('div');
         card.className = 'pro-card';
+
+        const notesHtml = app.notes
+            ? `<div class="appointment-notes"><span class="notes-icon">&#128221;</span> ${sanitize(app.notes)}</div>`
+            : '';
+
         card.innerHTML = `
             <div class="appointment-row">
                 <div class="appointment-info">
@@ -330,6 +296,7 @@ function renderAppointments() {
                     <div class="service">${sanitize(app.serviceName)}</div>
                     ${app.patientRut ? `<div class="detail">RUT: ${sanitize(app.patientRut)}</div>` : ''}
                     <div class="detail">Tel: ${sanitize(app.patientPhone || 'N/A')}</div>
+                    ${notesHtml}
                 </div>
                 <div class="appointment-actions appointment-actions--vertical">
                     <button class="btn-edit-outline" data-id="${app.id}">Editar</button>
@@ -343,10 +310,10 @@ function renderAppointments() {
 
 // ── Event delegation ───────────────────────────────────────
 document.getElementById('admin-app').addEventListener('click', (e) => {
-    const editBtn = e.target.closest('[data-id].btn-edit, [data-id].btn-edit-outline');
+    const editBtn = e.target.closest('[data-id].btn-edit-outline');
     if (editBtn) { openEdit(editBtn.dataset.id); return; }
 
-    const cancelBtn = e.target.closest('[data-id].btn-cancel-app, [data-id].btn-cancel-outline');
+    const cancelBtn = e.target.closest('[data-id].btn-cancel-outline');
     if (cancelBtn) { cancelApp(cancelBtn.dataset.id); return; }
 });
 
@@ -363,9 +330,9 @@ async function toggleBlock(time, currentlyBlocked) {
     try {
         if (currentlyBlocked) {
             const b = currentData.blocks.find(b => b.time === time || b.time === 'all');
-            if (b) await deleteDoc(doc(db, "blocks", b.id));
+            if (b) await deleteDoc(blockDoc(db, PRO_ID, b.id));
         } else {
-            await setDoc(doc(db, "blocks", `${date}_${time}`), { date, time, createdAt: new Date() });
+            await setDoc(blockDoc(db, PRO_ID, `${date}_${time}`), { date, time, createdAt: new Date() });
         }
     } catch (e) {
         console.error("Error toggling block:", e);
@@ -376,7 +343,7 @@ async function toggleBlock(time, currentlyBlocked) {
 document.getElementById('btn-block-day')?.addEventListener('click', async () => {
     const date = picker.value;
     try {
-        await setDoc(doc(db, "blocks", `${date}_all`), { date, time: "all", createdAt: new Date() });
+        await setDoc(blockDoc(db, PRO_ID, `${date}_all`), { date, time: "all", createdAt: new Date() });
         showToast("D\u00eda bloqueado.", "success");
     } catch (e) {
         showToast("Error al bloquear.", "error");
@@ -386,7 +353,7 @@ document.getElementById('btn-block-day')?.addEventListener('click', async () => 
 document.getElementById('btn-unblock-day')?.addEventListener('click', async () => {
     const date = picker.value;
     try {
-        const q = query(collection(db, "blocks"), where("date", "==", date));
+        const q = query(blocksCollection(db, PRO_ID), where("date", "==", date));
         const snap = await getDocs(q);
         const batch = writeBatch(db);
         snap.forEach(d => batch.delete(d.ref));
@@ -403,16 +370,15 @@ const editTimeSelect = document.getElementById('edit-time');
 populateTimeSelect(editTimeSelect);
 
 function openEdit(id) {
-    const app = currentData.appointments.find(a => a.id === id)
-        || todayAppointments.find(a => a.id === id);
+    const app = currentData.appointments.find(a => a.id === id);
+    if (!app) return;
 
     document.getElementById('edit-id').value = id;
-    if (app) {
-        document.getElementById('edit-name').value = app.patientName || '';
-        document.getElementById('edit-phone').value = app.patientPhone || '';
-        document.getElementById('edit-rut').value = app.patientRut || '';
-        editTimeSelect.value = app.time;
-    }
+    document.getElementById('edit-name').value = app.patientName || '';
+    document.getElementById('edit-phone').value = app.patientPhone || '';
+    document.getElementById('edit-rut').value = app.patientRut || '';
+    document.getElementById('edit-notes').value = app.notes || '';
+    editTimeSelect.value = app.time;
     editModal.style.display = 'flex';
 }
 
@@ -426,13 +392,14 @@ document.getElementById('btn-modal-save')?.addEventListener('click', async () =>
         patientName: document.getElementById('edit-name').value,
         patientPhone: document.getElementById('edit-phone').value,
         patientRut: document.getElementById('edit-rut').value,
+        notes: document.getElementById('edit-notes').value,
         time: editTimeSelect.value
     };
     const btn = document.getElementById('btn-modal-save');
     btn.disabled = true;
     btn.innerText = 'Guardando...';
     try {
-        await updateDoc(doc(db, "appointments", id), updates);
+        await updateDoc(apptDoc(db, PRO_ID, id), updates);
         editModal.style.display = 'none';
         showToast("Cita actualizada.", "success");
     } catch (e) {
@@ -447,9 +414,8 @@ document.getElementById('btn-modal-save')?.addEventListener('click', async () =>
 async function cancelApp(id) {
     if (!confirm("\u00bfCancelar esta cita?")) return;
     try {
-        const app = currentData.appointments.find(a => a.id === id)
-            || todayAppointments.find(a => a.id === id);
-        await deleteDoc(doc(db, "appointments", id));
+        const app = currentData.appointments.find(a => a.id === id);
+        await deleteDoc(apptDoc(db, PRO_ID, id));
         showToast("Cita cancelada.", "success");
 
         if (app && app.patientPhone && confirm("\u00bfEnviar aviso por WhatsApp?")) {
@@ -462,9 +428,9 @@ async function cancelApp(id) {
 }
 
 // ── Tab navigation ─────────────────────────────────────────
-const tabs = { today: 'tab-content-today', agenda: 'tab-content-agenda', reminders: 'tab-content-reminders', settings: 'tab-content-settings' };
-const titles = { today: 'Agenda de Hoy', agenda: 'Otros D\u00edas', reminders: 'Avisos', settings: 'Configuraci\u00f3n' };
-const subtitles = { today: 'Citas para este d\u00eda', agenda: 'Gestiona bloqueos y fechas', reminders: 'Seguimiento y recordatorios', settings: 'Horarios y acceso' };
+const tabs = { agenda: 'tab-content-agenda', reminders: 'tab-content-reminders', settings: 'tab-content-settings' };
+const titles = { agenda: 'Agenda', reminders: 'Avisos', settings: 'Configuraci\u00f3n' };
+const subtitles = { agenda: 'Gestiona bloqueos y fechas', reminders: 'Seguimiento y recordatorios', settings: 'Horarios y acceso' };
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -506,7 +472,7 @@ function fillSettingsSelects() {
 
 async function loadSettingsUI() {
     fillSettingsSelects();
-    configData = await loadBusinessSettings(db);
+    configData = await loadProfessionalSettings(db, PRO_ID);
     document.getElementById('set-start').value = configData.startTime || "";
     document.getElementById('set-end').value = configData.endTime || "";
     document.getElementById('set-lunch-start').value = configData.lunchStart || "";
@@ -519,14 +485,14 @@ document.getElementById('btn-save-settings')?.addEventListener('click', async ()
     btn.disabled = true;
     btn.innerText = 'Guardando...';
     try {
-        await setDoc(doc(db, "settings", "business_hours"), {
+        const newSettings = {
             startTime: document.getElementById('set-start').value,
             endTime: document.getElementById('set-end').value,
             lunchStart: document.getElementById('set-lunch-start').value,
-            lunchEnd: document.getElementById('set-lunch-end').value,
-            updatedAt: new Date()
-        });
-        configData = await loadBusinessSettings(db);
+            lunchEnd: document.getElementById('set-lunch-end').value
+        };
+        await updateDoc(proDoc(db, PRO_ID), { settings: newSettings });
+        configData = newSettings;
         showToast("Configuraci\u00f3n guardada.", "success");
     } catch (e) {
         showToast("Error al guardar.", "error");
@@ -550,7 +516,7 @@ async function loadReminders() {
         }
 
         const q = query(
-            collection(db, "appointments"),
+            apptCollection(db, PRO_ID),
             where("date", ">=", rangeDates[0]),
             where("date", "<=", rangeDates[rangeDates.length - 1])
         );
@@ -623,3 +589,6 @@ async function loadReminders() {
         remindersList.innerHTML = '<p class="text-muted text-center">Error al cargar recordatorios.</p>';
     }
 }
+
+// ── Start ──────────────────────────────────────────────────
+init();
