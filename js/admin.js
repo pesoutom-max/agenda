@@ -9,7 +9,112 @@ import {
     populateTimeSelect, DAY_NAMES_SHORT
 } from './shared.js';
 
-// ── State ──────────────────────────────────────────────────
+// ── PIN Authentication ─────────────────────────────────────
+const PIN_SESSION_KEY = 'facilpyme_admin_auth';
+const DEFAULT_PIN = '1234';
+
+const pinScreen = document.getElementById('pin-screen');
+const pinInput = document.getElementById('pin-input');
+const dashboard = document.getElementById('view-admin');
+const agendarLink = document.getElementById('btn-agendar-link');
+
+async function getStoredPin() {
+    try {
+        const snap = await getDocs(query(collection(db, "settings")));
+        const pinDoc = snap.docs.find(d => d.id === "admin_pin");
+        return pinDoc ? pinDoc.data().pin : DEFAULT_PIN;
+    } catch (e) {
+        console.error("Error fetching PIN:", e);
+        return DEFAULT_PIN;
+    }
+}
+
+async function verifyPin() {
+    const entered = pinInput.value.trim();
+    if (!entered) {
+        showToast("Ingresa tu PIN.", "error");
+        return;
+    }
+
+    const btn = document.getElementById('btn-pin-submit');
+    btn.disabled = true;
+    btn.innerText = 'Verificando...';
+
+    try {
+        const storedPin = await getStoredPin();
+        if (entered === storedPin) {
+            sessionStorage.setItem(PIN_SESSION_KEY, 'true');
+            showDashboard();
+        } else {
+            showToast("PIN incorrecto.", "error");
+            pinInput.value = '';
+            pinInput.focus();
+        }
+    } catch (e) {
+        showToast("Error de conexi\u00f3n.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Ingresar';
+    }
+}
+
+function showDashboard() {
+    pinScreen.style.display = 'none';
+    dashboard.style.display = 'block';
+    if (agendarLink) agendarLink.style.display = 'flex';
+    initDashboard();
+}
+
+document.getElementById('btn-pin-submit')?.addEventListener('click', verifyPin);
+pinInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') verifyPin();
+});
+
+// Check session on load
+if (sessionStorage.getItem(PIN_SESSION_KEY) === 'true') {
+    showDashboard();
+}
+
+// ── Change PIN ─────────────────────────────────────────────
+document.getElementById('btn-change-pin')?.addEventListener('click', async () => {
+    const newPin = document.getElementById('new-pin').value.trim();
+    const confirmPin = document.getElementById('confirm-pin').value.trim();
+
+    if (newPin.length < 4) {
+        showToast("El PIN debe tener al menos 4 d\u00edgitos.", "error");
+        return;
+    }
+    if (newPin !== confirmPin) {
+        showToast("Los PIN no coinciden.", "error");
+        return;
+    }
+    if (!/^\d+$/.test(newPin)) {
+        showToast("El PIN debe contener solo n\u00fameros.", "error");
+        return;
+    }
+
+    try {
+        await setDoc(doc(db, "settings", "admin_pin"), { pin: newPin, updatedAt: new Date() });
+        showToast("PIN actualizado correctamente.", "success");
+        document.getElementById('new-pin').value = '';
+        document.getElementById('confirm-pin').value = '';
+    } catch (e) {
+        console.error("Error changing PIN:", e);
+        showToast("Error al cambiar el PIN.", "error");
+    }
+});
+
+// ── Logout ─────────────────────────────────────────────────
+document.getElementById('btn-logout')?.addEventListener('click', () => {
+    sessionStorage.removeItem(PIN_SESSION_KEY);
+    dashboard.style.display = 'none';
+    if (agendarLink) agendarLink.style.display = 'none';
+    pinScreen.style.display = 'block';
+    pinInput.value = '';
+    pinInput.focus();
+});
+
+// ── Dashboard State ────────────────────────────────────────
 const TODAY_STR = formatDateYMD(new Date());
 let currentMonth = new Date();
 let currentData = { appointments: [], blocks: [] };
@@ -18,15 +123,13 @@ let appointmentsByDay = {};
 let blocksByDay = {};
 let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
 
-// Listener cleanup refs (fix memory leak)
 let unsubDateApp = null;
 let unsubDateBlock = null;
 let unsubIndicators = null;
+let dashboardInitialized = false;
 
-// ── DOM references ─────────────────────────────────────────
+// ── DOM references (dashboard) ─────────────────────────────
 const picker = document.getElementById('admin-date-picker');
-picker.value = TODAY_STR;
-
 const calendarRootAdmin = document.getElementById('calendar-root-admin');
 const adminTimeGrid = document.getElementById('admin-time-grid');
 const todayAgendaList = document.getElementById('today-agenda-list');
@@ -34,12 +137,23 @@ const appointmentsSection = document.getElementById('appointments-section');
 const adminAppointmentsList = document.getElementById('admin-appointments-list');
 const remindersList = document.getElementById('reminders-list');
 
+// ── Initialize dashboard (only once, after PIN) ────────────
+async function initDashboard() {
+    if (dashboardInitialized) return;
+    dashboardInitialized = true;
+
+    picker.value = TODAY_STR;
+    configData = await loadBusinessSettings(db);
+    listenToday();
+    loadDateData();
+    listenMonthIndicators();
+}
+
 // ── Load data for selected date (with cleanup) ────────────
 function loadDateData() {
     const date = picker.value;
     if (!date) return;
 
-    // Unsubscribe previous listeners to prevent memory leak
     if (unsubDateApp) unsubDateApp();
     if (unsubDateBlock) unsubDateBlock();
 
@@ -56,7 +170,7 @@ function loadDateData() {
     });
 }
 
-// ── Month indicators (red dots + blocked days) ─────────────
+// ── Month indicators ───────────────────────────────────────
 function listenMonthIndicators() {
     if (unsubIndicators) unsubIndicators();
 
@@ -66,11 +180,9 @@ function listenMonthIndicators() {
     const endStr = `${year}-${month}-31`;
 
     const qApp = query(collection(db, "appointments"),
-        where("date", ">=", startStr),
-        where("date", "<=", endStr));
+        where("date", ">=", startStr), where("date", "<=", endStr));
     const qBlock = query(collection(db, "blocks"),
-        where("date", ">=", startStr),
-        where("date", "<=", endStr));
+        where("date", ">=", startStr), where("date", "<=", endStr));
 
     const unsubApp = onSnapshot(qApp, (snap) => {
         const counts = {};
@@ -113,7 +225,7 @@ function renderAdminCalendar() {
     });
 }
 
-// ── Today tab listener ─────────────────────────────────────
+// ── Today tab ──────────────────────────────────────────────
 function listenToday() {
     const q = query(collection(db, "appointments"), where("date", "==", TODAY_STR));
     onSnapshot(q, (snap) => {
@@ -126,12 +238,11 @@ function listenToday() {
 function renderAll() {
     renderTimeGrid();
     renderAppointments();
-    appointmentsSection.style.display = 'block';
+    appointmentsSection.classList.remove('appointments-section-hidden');
 }
 
 function renderTodayTab() {
     todayAgendaList.innerHTML = '';
-
     const sorted = todayAppointments
         .filter(a => a.status === STATUS.CONFIRMED)
         .sort((a, b) => a.time.localeCompare(b.time));
@@ -140,7 +251,7 @@ function renderTodayTab() {
         todayAgendaList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state__icon">\u2615</div>
-                <p>No hay citas agendadas para hoy todav\u00eda.</p>
+                <p>No hay citas agendadas para hoy.</p>
             </div>`;
         return;
     }
@@ -150,7 +261,7 @@ function renderTodayTab() {
         card.className = 'pro-card';
         card.innerHTML = `
             <div class="appointment-row">
-                <div>
+                <div class="appointment-info">
                     <div class="appointment-time">${sanitize(app.time)}</div>
                     <div class="appointment-name">${sanitize(app.patientName)}</div>
                     <div class="appointment-service">${sanitize(app.serviceName)}</div>
@@ -175,24 +286,21 @@ function renderTimeGrid() {
         const isBlocked = isBlockedByDay || isGlobalBlocked;
 
         const slot = document.createElement('div');
-        slot.className = `time-slot ${isAppointed ? 'active' : ''} ${isBlocked ? 'blocked' : ''}`;
-        slot.classList.add('time-slot--admin');
-
-        if (isBlocked) {
-            if (isGlobalBlocked) slot.classList.add('time-slot--global-blocked');
-            else slot.classList.add('time-slot--manual-blocked');
-        }
+        slot.className = `time-slot time-slot--admin`;
+        if (isAppointed) slot.classList.add('active');
+        if (isGlobalBlocked) slot.classList.add('time-slot--global-blocked');
+        else if (isBlockedByDay) slot.classList.add('time-slot--manual-blocked');
 
         let statusLabel = 'Libre';
         if (isAppointed) statusLabel = 'Ocupado';
-        else if (isGlobalBlocked) statusLabel = 'Fuera Horario';
-        else if (isBlockedByDay) statusLabel = 'Bloqueado';
+        else if (isGlobalBlocked) statusLabel = 'Fuera';
+        else if (isBlockedByDay) statusLabel = 'Bloq.';
 
         slot.innerHTML = `
             <div class="slot-time">${time}</div>
             <div class="slot-status">${statusLabel}</div>
             <button class="slot-toggle-btn" data-time="${time}" data-blocked="${!!isBlockedByDay}" ${isGlobalBlocked ? 'disabled' : ''}>
-                ${isBlockedByDay ? 'Quitar Bloqueo' : 'Bloquear'}
+                ${isBlockedByDay ? 'Abrir' : 'Cerrar'}
             </button>
         `;
         adminTimeGrid.appendChild(slot);
@@ -216,12 +324,12 @@ function renderAppointments() {
         card.className = 'pro-card';
         card.innerHTML = `
             <div class="appointment-row">
-                <div>
+                <div class="appointment-info">
                     <div class="time">${sanitize(app.time)}</div>
                     <div class="name">${sanitize(app.patientName)}</div>
                     <div class="service">${sanitize(app.serviceName)}</div>
                     ${app.patientRut ? `<div class="detail">RUT: ${sanitize(app.patientRut)}</div>` : ''}
-                    <div class="detail">Tel: ${sanitize(app.patientPhone || 'No registrado')}</div>
+                    <div class="detail">Tel: ${sanitize(app.patientPhone || 'N/A')}</div>
                 </div>
                 <div class="appointment-actions appointment-actions--vertical">
                     <button class="btn-edit-outline" data-id="${app.id}">Editar</button>
@@ -233,7 +341,7 @@ function renderAppointments() {
     });
 }
 
-// ── Event delegation for dynamic buttons ───────────────────
+// ── Event delegation ───────────────────────────────────────
 document.getElementById('admin-app').addEventListener('click', (e) => {
     const editBtn = e.target.closest('[data-id].btn-edit, [data-id].btn-edit-outline');
     if (editBtn) { openEdit(editBtn.dataset.id); return; }
@@ -245,13 +353,11 @@ document.getElementById('admin-app').addEventListener('click', (e) => {
 adminTimeGrid.addEventListener('click', (e) => {
     const toggleBtn = e.target.closest('.slot-toggle-btn');
     if (toggleBtn && !toggleBtn.disabled) {
-        const time = toggleBtn.dataset.time;
-        const isBlocked = toggleBtn.dataset.blocked === 'true';
-        toggleBlock(time, isBlocked);
+        toggleBlock(toggleBtn.dataset.time, toggleBtn.dataset.blocked === 'true');
     }
 });
 
-// ── Block/Unblock operations ───────────────────────────────
+// ── Block/Unblock ──────────────────────────────────────────
 async function toggleBlock(time, currentlyBlocked) {
     const date = picker.value;
     try {
@@ -259,9 +365,7 @@ async function toggleBlock(time, currentlyBlocked) {
             const b = currentData.blocks.find(b => b.time === time || b.time === 'all');
             if (b) await deleteDoc(doc(db, "blocks", b.id));
         } else {
-            await setDoc(doc(db, "blocks", `${date}_${time}`), {
-                date, time, createdAt: new Date()
-            });
+            await setDoc(doc(db, "blocks", `${date}_${time}`), { date, time, createdAt: new Date() });
         }
     } catch (e) {
         console.error("Error toggling block:", e);
@@ -272,13 +376,10 @@ async function toggleBlock(time, currentlyBlocked) {
 document.getElementById('btn-block-day')?.addEventListener('click', async () => {
     const date = picker.value;
     try {
-        await setDoc(doc(db, "blocks", `${date}_all`), {
-            date, time: "all", createdAt: new Date()
-        });
-        showToast("D\u00eda bloqueado correctamente.", "success");
+        await setDoc(doc(db, "blocks", `${date}_all`), { date, time: "all", createdAt: new Date() });
+        showToast("D\u00eda bloqueado.", "success");
     } catch (e) {
-        console.error("Error blocking day:", e);
-        showToast("Error al bloquear el d\u00eda.", "error");
+        showToast("Error al bloquear.", "error");
     }
 });
 
@@ -290,22 +391,18 @@ document.getElementById('btn-unblock-day')?.addEventListener('click', async () =
         const batch = writeBatch(db);
         snap.forEach(d => batch.delete(d.ref));
         await batch.commit();
-        showToast("Bloqueos del d\u00eda eliminados.", "success");
+        showToast("Bloqueos eliminados.", "success");
     } catch (e) {
-        console.error("Error unblocking day:", e);
-        showToast("Error al limpiar bloqueos.", "error");
+        showToast("Error al limpiar.", "error");
     }
 });
 
 // ── Edit modal ─────────────────────────────────────────────
 const editModal = document.getElementById('edit-modal');
 const editTimeSelect = document.getElementById('edit-time');
-
-// Populate time select options on load (fixes broken template literal)
 populateTimeSelect(editTimeSelect);
 
 function openEdit(id) {
-    // Search in both currentData and todayAppointments (fixes today tab bug)
     const app = currentData.appointments.find(a => a.id === id)
         || todayAppointments.find(a => a.id === id);
 
@@ -316,7 +413,6 @@ function openEdit(id) {
         document.getElementById('edit-rut').value = app.patientRut || '';
         editTimeSelect.value = app.time;
     }
-
     editModal.style.display = 'flex';
 }
 
@@ -332,50 +428,43 @@ document.getElementById('btn-modal-save')?.addEventListener('click', async () =>
         patientRut: document.getElementById('edit-rut').value,
         time: editTimeSelect.value
     };
-
     const btn = document.getElementById('btn-modal-save');
     btn.disabled = true;
     btn.innerText = 'Guardando...';
-
     try {
         await updateDoc(doc(db, "appointments", id), updates);
         editModal.style.display = 'none';
-        showToast("Cita actualizada correctamente.", "success");
+        showToast("Cita actualizada.", "success");
     } catch (e) {
-        console.error("Error updating appointment:", e);
-        showToast("Error al actualizar la cita.", "error");
+        showToast("Error al actualizar.", "error");
     } finally {
         btn.disabled = false;
-        btn.innerText = 'Guardar Cambios';
+        btn.innerText = 'Guardar';
     }
 });
 
 // ── Cancel appointment ─────────────────────────────────────
 async function cancelApp(id) {
-    if (!confirm("\u00bfEst\u00e1s seguro de que deseas cancelar esta cita?")) return;
-
+    if (!confirm("\u00bfCancelar esta cita?")) return;
     try {
-        // Find appointment data before deleting for WhatsApp notification
         const app = currentData.appointments.find(a => a.id === id)
             || todayAppointments.find(a => a.id === id);
-
         await deleteDoc(doc(db, "appointments", id));
         showToast("Cita cancelada.", "success");
 
-        if (app && app.patientPhone && confirm("\u00bfDeseas enviar un aviso por WhatsApp?")) {
-            const msg = `Hola ${app.patientName}, lamentamos informarte que tu cita del ${app.date} a las ${app.time} ha sido cancelada. Cont\u00e1ctanos para reagendar.`;
+        if (app && app.patientPhone && confirm("\u00bfEnviar aviso por WhatsApp?")) {
+            const msg = `Hola ${app.patientName}, tu cita del ${app.date} a las ${app.time} fue cancelada. Cont\u00e1ctanos para reagendar.`;
             window.open(`https://wa.me/56${app.patientPhone}?text=${encodeURIComponent(msg)}`, '_blank');
         }
     } catch (e) {
-        console.error("Error cancelling appointment:", e);
-        showToast("Error al cancelar la cita.", "error");
+        showToast("Error al cancelar.", "error");
     }
 }
 
 // ── Tab navigation ─────────────────────────────────────────
 const tabs = { today: 'tab-content-today', agenda: 'tab-content-agenda', reminders: 'tab-content-reminders', settings: 'tab-content-settings' };
-const titles = { today: 'Agenda de Hoy', agenda: 'Otros D\u00edas', reminders: 'Avisos de Pacientes', settings: 'Configuraci\u00f3n General' };
-const subtitles = { today: 'Tus citas para este d\u00eda', agenda: 'Gestiona bloqueos y fechas futuras', reminders: 'Seguimiento y recordatorios', settings: 'Horarios globales de atenci\u00f3n' };
+const titles = { today: 'Agenda de Hoy', agenda: 'Otros D\u00edas', reminders: 'Avisos', settings: 'Configuraci\u00f3n' };
+const subtitles = { today: 'Citas para este d\u00eda', agenda: 'Gestiona bloqueos y fechas', reminders: 'Seguimiento y recordatorios', settings: 'Horarios y acceso' };
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -429,7 +518,6 @@ document.getElementById('btn-save-settings')?.addEventListener('click', async ()
     const btn = document.getElementById('btn-save-settings');
     btn.disabled = true;
     btn.innerText = 'Guardando...';
-
     try {
         await setDoc(doc(db, "settings", "business_hours"), {
             startTime: document.getElementById('set-start').value,
@@ -439,19 +527,18 @@ document.getElementById('btn-save-settings')?.addEventListener('click', async ()
             updatedAt: new Date()
         });
         configData = await loadBusinessSettings(db);
-        showToast("Configuraci\u00f3n guardada correctamente.", "success");
+        showToast("Configuraci\u00f3n guardada.", "success");
     } catch (e) {
-        console.error("Error saving settings:", e);
-        showToast("Error al guardar configuraci\u00f3n.", "error");
+        showToast("Error al guardar.", "error");
     } finally {
         btn.disabled = false;
         btn.innerText = 'Guardar Configuraci\u00f3n';
     }
 });
 
-// ── Reminders (optimized query with date filter) ───────────
+// ── Reminders ──────────────────────────────────────────────
 async function loadReminders() {
-    remindersList.innerHTML = '<p class="text-muted text-center loading-text">Cargando recordatorios...</p>';
+    remindersList.innerHTML = '<p class="text-muted text-center loading-text">Cargando...</p>';
 
     try {
         const now = new Date();
@@ -462,7 +549,6 @@ async function loadReminders() {
             rangeDates.push(formatDateYMD(d));
         }
 
-        // Fetch appointments in date range, filter status in JS to avoid composite index
         const q = query(
             collection(db, "appointments"),
             where("date", ">=", rangeDates[0]),
@@ -496,7 +582,7 @@ async function loadReminders() {
             return;
         }
 
-        remindersList.innerHTML = '<h3>Pr\u00f3ximos Recordatorios (5 d\u00edas)</h3>';
+        remindersList.innerHTML = '<h3 class="section-title">Pr\u00f3ximos 5 d\u00edas</h3>';
         reminders
             .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
             .forEach(app => {
@@ -508,26 +594,26 @@ async function loadReminders() {
 
                 let label, color, msg;
                 if (app.dayOffset === 0) {
-                    label = app.type === '2h' ? 'Hoy (Pronto)' : 'Hoy';
+                    label = app.type === '2h' ? 'Pronto' : 'Hoy';
                     color = app.type === '2h' ? '#FF9500' : '#007AFF';
                     msg = `Hola ${app.patientName}, te recordamos tu hora de hoy a las ${app.time}.`;
                 } else if (app.dayOffset === 1) {
                     label = 'Ma\u00f1ana'; color = '#34C759';
                     msg = `Hola ${app.patientName}, te recordamos tu hora para ma\u00f1ana ${dayName} a las ${app.time}.`;
                 } else {
-                    label = `En ${app.dayOffset} d\u00edas (${dayName})`; color = '#5856D6';
+                    label = `${dayName} (${app.dayOffset}d)`; color = '#5856D6';
                     msg = `Hola ${app.patientName}, te recordamos tu cita del ${dayName} ${app.date} a las ${app.time}.`;
                 }
 
-                card.style.borderLeft = `4px solid ${color}`;
+                card.style.borderLeftColor = color;
                 card.innerHTML = `
                     <div class="reminder-row">
-                        <div>
+                        <div class="reminder-info">
                             <span class="reminder-label" style="color: ${color};">${label}</span>
                             <div class="reminder-title">${sanitize(app.time)} - ${sanitize(app.patientName)}</div>
-                            <div class="reminder-detail">${sanitize(app.serviceName)} (${sanitize(app.date)})</div>
+                            <div class="reminder-detail">${sanitize(app.serviceName)}</div>
                         </div>
-                        <a href="https://wa.me/56${sanitize(app.patientPhone)}?text=${encodeURIComponent(msg)}" target="_blank" class="btn-whatsapp">WhatsApp</a>
+                        <a href="https://wa.me/56${sanitize(app.patientPhone)}?text=${encodeURIComponent(msg)}" target="_blank" class="btn-whatsapp">WA</a>
                     </div>
                 `;
                 remindersList.appendChild(card);
@@ -537,13 +623,3 @@ async function loadReminders() {
         remindersList.innerHTML = '<p class="text-muted text-center">Error al cargar recordatorios.</p>';
     }
 }
-
-// ── Initialize ─────────────────────────────────────────────
-async function init() {
-    configData = await loadBusinessSettings(db);
-    listenToday();
-    loadDateData();
-    listenMonthIndicators();
-}
-
-init();

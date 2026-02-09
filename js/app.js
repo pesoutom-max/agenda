@@ -12,7 +12,6 @@ let bookingData = { service: '', date: '', time: '', name: '', phone: '', email:
 let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
 let currentMonth = new Date();
 let wpUrl = '';
-const isProfessional = new URLSearchParams(window.location.search).get('view') === 'pro';
 
 // ── DOM references ─────────────────────────────────────────
 const calendarRoot = document.getElementById('calendar-root');
@@ -21,16 +20,6 @@ const timeContainer = document.getElementById('time-selection-container');
 const patientTimeGrid = document.getElementById('patient-time-grid');
 const btnServices = document.getElementById('btn-services');
 const btnDatetime = document.getElementById('btn-datetime');
-
-// ── Professional mode banner ───────────────────────────────
-if (isProfessional) {
-    document.querySelector('.logo').innerHTML += ' <span class="pro-label">(Modo Pro)</span>';
-    const backBtn = document.createElement('a');
-    backBtn.href = 'admin.html';
-    backBtn.innerText = '\u2190 Volver al Panel';
-    backBtn.className = 'pro-back-link';
-    document.body.appendChild(backBtn);
-}
 
 // ── Navigation ─────────────────────────────────────────────
 function goTo(screenId) {

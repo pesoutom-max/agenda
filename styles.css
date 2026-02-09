@@ -829,3 +829,217 @@ h1 {
 .toast-success { background: var(--secondary); }
 .toast-error { background: var(--danger); }
 .toast-warning { background: var(--warning); }
+
+/* ── PIN Screen ──────────────────────────────────────── */
+.pin-container {
+    text-align: center;
+    padding: 40px 0 20px;
+}
+
+.pin-icon {
+    font-size: 3.5rem;
+    margin-bottom: 16px;
+}
+
+.pin-container .form-group {
+    max-width: 200px;
+    margin: 24px auto;
+}
+
+.pin-container input {
+    text-align: center;
+    font-size: 1.5rem;
+    letter-spacing: 8px;
+    padding: 16px;
+}
+
+.pin-hint {
+    margin-top: 16px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.btn-logout {
+    margin-top: 32px;
+    color: var(--danger);
+    border-color: var(--danger-soft);
+}
+
+/* ── Section titles ──────────────────────────────────── */
+.section-title {
+    font-size: 1rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-subtitle {
+    margin-bottom: 12px;
+}
+
+/* ── Appointments section ────────────────────────────── */
+.appointments-section-hidden { display: none; }
+
+.calendar-wrapper { margin-bottom: 24px; }
+
+.appointment-info { min-width: 0; flex: 1; }
+
+.reminder-info { min-width: 0; flex: 1; }
+
+/* ── Mobile optimizations ────────────────────────────── */
+html {
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+}
+
+/* Safe area insets for notched phones */
+.app-container {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+#toast-container {
+    bottom: calc(24px + env(safe-area-inset-bottom, 0));
+}
+
+/* Ensure minimum touch targets (44px) */
+.btn-primary,
+.btn-secondary,
+.btn-back,
+.tab-btn,
+.selectable-card,
+.time-slot,
+.btn-edit,
+.btn-cancel-app,
+.btn-edit-outline,
+.btn-cancel-outline {
+    min-height: 44px;
+}
+
+/* Responsive typography */
+@media (max-width: 380px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    .subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+
+    main {
+        padding: 16px;
+    }
+
+    .tab-btn {
+        padding: 8px 6px;
+        font-size: 0.78rem;
+    }
+
+    .btn-primary {
+        font-size: 1rem;
+        padding: 14px;
+    }
+
+    .selectable-card h3 {
+        font-size: 1rem;
+    }
+
+    .calendar-day {
+        font-size: 0.8rem;
+    }
+
+    .time-slot--admin {
+        padding: 10px 6px;
+    }
+
+    .slot-time {
+        font-size: 0.85rem;
+    }
+
+    .slot-status {
+        font-size: 0.6rem;
+    }
+
+    .slot-toggle-btn {
+        font-size: 0.55rem;
+    }
+
+    .appointment-time {
+        font-size: 1rem;
+    }
+
+    .appointment-name {
+        font-size: 0.9rem;
+    }
+
+    .btn-edit,
+    .btn-cancel-app,
+    .btn-edit-outline,
+    .btn-cancel-outline {
+        padding: 6px 8px;
+        font-size: 0.7rem;
+    }
+
+    .btn-whatsapp {
+        padding: 6px 8px;
+        font-size: 0.7rem;
+    }
+
+    .reminder-title {
+        font-size: 0.95rem;
+    }
+
+    .modal-content {
+        padding: 20px 16px;
+    }
+
+    .admin-day-actions .btn-primary {
+        font-size: 0.8rem;
+        padding: 8px;
+    }
+
+    .pro-card {
+        padding: 12px;
+    }
+}
+
+/* Prevent horizontal scroll */
+body {
+    overflow-x: hidden;
+}
+
+/* Time grid on admin: ensure 3 columns fit */
+.admin-time-grid-container {
+    overflow-x: hidden;
+}
+
+/* Modal: full-width on very small screens */
+@media (max-width: 420px) {
+    .modal-overlay {
+        padding: 12px;
+    }
+
+    .modal-content {
+        max-width: 100%;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Ensure long text doesn't overflow cards */
+.pro-card {
+    overflow: hidden;
+    word-wrap: break-word;
+}
+
+.appointment-name,
+.reminder-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
