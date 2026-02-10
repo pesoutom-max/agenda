@@ -256,25 +256,25 @@ function renderTimeGrid() {
     adminTimeGrid.innerHTML = '';
 
     timeSlots.forEach(time => {
+        const isGlobalBlocked = isOutsideBusinessHours(time, configData);
+        if (isGlobalBlocked) return; // No mostrar horarios fuera del horario laboral
+
         const isAppointed = currentData.appointments.find(a => a.time === time && a.status === STATUS.CONFIRMED);
         const isBlockedByDay = currentData.blocks.find(b => b.time === time || b.time === 'all');
-        const isGlobalBlocked = isOutsideBusinessHours(time, configData);
 
         const slot = document.createElement('div');
         slot.className = 'time-slot time-slot--admin';
         if (isAppointed) slot.classList.add('active');
-        if (isGlobalBlocked) slot.classList.add('time-slot--global-blocked');
-        else if (isBlockedByDay) slot.classList.add('time-slot--manual-blocked');
+        if (isBlockedByDay) slot.classList.add('time-slot--manual-blocked');
 
         let statusLabel = 'Libre';
         if (isAppointed) statusLabel = 'Ocupado';
-        else if (isGlobalBlocked) statusLabel = 'Fuera';
         else if (isBlockedByDay) statusLabel = 'Bloq.';
 
         slot.innerHTML = `
             <div class="slot-time">${time}</div>
             <div class="slot-status">${statusLabel}</div>
-            <button class="slot-toggle-btn" data-time="${time}" data-blocked="${!!isBlockedByDay}" ${isGlobalBlocked ? 'disabled' : ''}>
+            <button class="slot-toggle-btn" data-time="${time}" data-blocked="${!!isBlockedByDay}">
                 ${isBlockedByDay ? 'Abrir' : 'Cerrar'}
             </button>
         `;
