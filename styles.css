@@ -1203,6 +1203,9 @@ body {
 .pro-list-actions {
     flex-shrink: 0;
     margin-left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 /* ── Delete warning ─────────────────────────────────── */

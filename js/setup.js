@@ -1,6 +1,6 @@
 import { db } from './firebase-init.js';
 import {
-    collection, doc, getDoc, setDoc, getDocs, deleteDoc, query, writeBatch, serverTimestamp
+    collection, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, query, writeBatch, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { sanitize, showToast } from './shared.js';
 
@@ -99,6 +99,7 @@ async function loadProfessionals() {
                         </div>
                     </div>
                     <div class="pro-list-actions">
+                        <button class="btn-edit-outline btn-edit-pro" data-id="${pro.id}" data-name="${sanitize(pro.name)}" data-phone="${sanitize(pro.phone || '')}" data-email="${sanitize(pro.email || '')}">Editar</button>
                         <button class="btn-cancel-outline btn-delete-pro" data-id="${pro.id}">Eliminar</button>
                     </div>
                 </div>
@@ -186,16 +187,70 @@ document.getElementById('pro-slug')?.addEventListener('input', () => {
     document.getElementById('pro-slug')._userEdited = true;
 });
 
-// ── Delete professional ─────────────────────────────────────
-const deleteModal = document.getElementById('delete-modal');
+// ── Edit professional ────────────────────────────────────────
+const editModal = document.getElementById('edit-modal');
 
 proList.addEventListener('click', (e) => {
-    const btn = e.target.closest('.btn-delete-pro');
-    if (btn) {
-        document.getElementById('delete-pro-id').value = btn.dataset.id;
+    // Edit button
+    const editBtn = e.target.closest('.btn-edit-pro');
+    if (editBtn) {
+        document.getElementById('edit-pro-id').value = editBtn.dataset.id;
+        document.getElementById('edit-pro-name').value = editBtn.dataset.name || '';
+        document.getElementById('edit-pro-phone').value = editBtn.dataset.phone || '';
+        document.getElementById('edit-pro-email').value = editBtn.dataset.email || '';
+        document.getElementById('edit-pro-pin').value = '';
+        editModal.style.display = 'flex';
+        return;
+    }
+
+    // Delete button
+    const deleteBtn = e.target.closest('.btn-delete-pro');
+    if (deleteBtn) {
+        document.getElementById('delete-pro-id').value = deleteBtn.dataset.id;
         deleteModal.style.display = 'flex';
     }
 });
+
+document.getElementById('btn-edit-cancel')?.addEventListener('click', () => {
+    editModal.style.display = 'none';
+});
+
+document.getElementById('btn-edit-save')?.addEventListener('click', async () => {
+    const proId = document.getElementById('edit-pro-id').value;
+    const name = document.getElementById('edit-pro-name').value.trim();
+    const phone = document.getElementById('edit-pro-phone').value.trim();
+    const email = document.getElementById('edit-pro-email').value.trim();
+    const pin = document.getElementById('edit-pro-pin').value.trim();
+
+    if (!name) { showToast("El nombre no puede estar vacío.", "error"); return; }
+    if (pin && (pin.length < 4 || !/^\d+$/.test(pin))) {
+        showToast("El PIN debe tener 4-6 dígitos numéricos.", "error");
+        return;
+    }
+
+    const btn = document.getElementById('btn-edit-save');
+    btn.disabled = true;
+    btn.innerText = 'Guardando...';
+
+    try {
+        const updates = { name, phone, email };
+        if (pin) updates.pin = pin;
+
+        await updateDoc(doc(db, "professionals", proId), updates);
+        showToast("Profesional actualizado.", "success");
+        editModal.style.display = 'none';
+        loadProfessionals();
+    } catch (e) {
+        console.error("Error updating professional:", e);
+        showToast("Error al actualizar.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Guardar Cambios';
+    }
+});
+
+// ── Delete professional ─────────────────────────────────────
+const deleteModal = document.getElementById('delete-modal');
 
 document.getElementById('btn-delete-cancel')?.addEventListener('click', () => {
     deleteModal.style.display = 'none';
