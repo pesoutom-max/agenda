@@ -3,9 +3,10 @@ import {
     addDoc, getDocs, query, where, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
-    STATUS, TIME_SLOTS, sanitize, showToast, validateRut, validateEmail,
+    STATUS, sanitize, showToast, validateRut, validateEmail,
     renderCalendar, isOutsideBusinessHours, formatDateYMD,
-    apptCollection, blocksCollection, loadProfessionalSettings, loadProfessionalProfile
+    apptCollection, blocksCollection, loadProfessionalSettings, loadProfessionalProfile,
+    generateTimeSlots, DEFAULT_SLOT_INTERVAL
 } from './shared.js';
 
 // ── Read professional ID from URL ───────────────────────────
@@ -14,7 +15,8 @@ const PRO_ID = params.get('pro');
 
 // ── State ──────────────────────────────────────────────────
 let bookingData = { service: '', date: '', time: '', name: '', phone: '', email: '' };
-let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
+let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "", slotInterval: DEFAULT_SLOT_INTERVAL };
+let timeSlots = generateTimeSlots(DEFAULT_SLOT_INTERVAL);
 let currentMonth = new Date();
 let wpUrl = '';
 
@@ -25,6 +27,7 @@ const timeContainer = document.getElementById('time-selection-container');
 const patientTimeGrid = document.getElementById('patient-time-grid');
 const btnServices = document.getElementById('btn-services');
 const btnDatetime = document.getElementById('btn-datetime');
+const servicesCardList = document.getElementById('services-card-list');
 
 // ── Navigation ─────────────────────────────────────────────
 function goTo(screenId) {
@@ -54,14 +57,46 @@ async function init() {
     if (headerName) headerName.textContent = profile.name;
 
     configData = await loadProfessionalSettings(db, PRO_ID);
+    timeSlots = generateTimeSlots(configData.slotInterval);
+
+    // Load services dynamically
+    const services = (profile.services && profile.services.length > 0) ? profile.services : [];
+    renderServices(services);
+
     renderPatientCalendar();
 
-    // Handle #cancel hash
     if (window.location.hash === '#cancel') {
         goTo('screen-cancel');
     } else {
         goTo('screen-start');
     }
+}
+
+// ── Render services from professional config ───────────────
+function renderServices(services) {
+    servicesCardList.innerHTML = '';
+
+    if (services.length === 0) {
+        servicesCardList.innerHTML = '<p class="text-muted">Este profesional a\u00fan no ha configurado sus servicios.</p>';
+        return;
+    }
+
+    services.forEach(svc => {
+        const card = document.createElement('div');
+        card.className = 'selectable-card';
+        card.dataset.service = svc.name;
+        card.dataset.duration = `${svc.duration} min`;
+        card.innerHTML = `<div><h3>${sanitize(svc.name)}</h3><span>${svc.duration} min</span></div>`;
+
+        card.addEventListener('click', () => {
+            bookingData.service = svc.name;
+            servicesCardList.querySelectorAll('.selectable-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            btnServices.disabled = false;
+        });
+
+        servicesCardList.appendChild(card);
+    });
 }
 
 // ── Back buttons ───────────────────────────────────────────
@@ -72,16 +107,6 @@ document.getElementById('btn-back-rut')?.addEventListener('click', () => {
     const btn = document.querySelector('#screen-data .btn-primary');
     if (btn) { btn.disabled = false; btn.innerText = 'Siguiente'; }
     goTo('screen-data');
-});
-
-// ── Service selection ──────────────────────────────────────
-document.querySelectorAll('.selectable-card').forEach(card => {
-    card.addEventListener('click', () => {
-        bookingData.service = card.dataset.service;
-        document.querySelectorAll('.selectable-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
-        btnServices.disabled = false;
-    });
 });
 
 // ── Static button handlers ─────────────────────────────────
@@ -152,7 +177,7 @@ async function checkAvailability() {
         patientTimeGrid.innerHTML = '';
         let slotsRendered = 0;
 
-        TIME_SLOTS.forEach(time => {
+        timeSlots.forEach(time => {
             if (isOutsideBusinessHours(time, configData)) return;
 
             slotsRendered++;
@@ -238,7 +263,6 @@ async function saveRutAndFinish() {
     btn.innerText = 'Guardando...';
 
     try {
-        // Race condition check: verify slot is still available before saving
         const checkQuery = query(
             apptCollection(db, PRO_ID),
             where("date", "==", bookingData.date),
@@ -268,7 +292,6 @@ async function saveRutAndFinish() {
             createdAt: serverTimestamp()
         });
 
-        // Prepare WhatsApp message
         const msg = `Su hora ha sido agendada para ${bookingData.service} el d\u00eda ${bookingData.date} a las ${bookingData.time}. Muchas gracias`;
         wpUrl = `https://wa.me/56${bookingData.phone}?text=${encodeURIComponent(msg)}`;
 

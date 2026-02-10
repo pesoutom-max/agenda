@@ -6,7 +6,7 @@ export const STATUS = {
     CANCELLED: 'cancelled'
 };
 
-export const TIME_SLOTS = window.TIME_SLOTS;
+export const DEFAULT_SLOT_INTERVAL = 45;
 
 const MONTH_NAMES = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -39,18 +39,36 @@ export function blockDoc(db, proId, blockId) {
     return doc(db, "professionals", proId, "blocks", blockId);
 }
 
+// ── Generate time slots dynamically ─────────────────────────
+export function generateTimeSlots(interval = DEFAULT_SLOT_INTERVAL) {
+    const slots = [];
+    for (let mins = 360; mins < 1320; mins += interval) { // 06:00 to 21:59
+        const h = String(Math.floor(mins / 60)).padStart(2, '0');
+        const m = String(mins % 60).padStart(2, '0');
+        slots.push(`${h}:${m}`);
+    }
+    return slots;
+}
+
 // ── Load professional settings ─────────────────────────────
 export async function loadProfessionalSettings(db, proId) {
     try {
         const snap = await getDoc(proDoc(db, proId));
         if (snap.exists()) {
             const data = snap.data();
-            return data.settings || { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
+            const s = data.settings || {};
+            return {
+                startTime: s.startTime || "",
+                endTime: s.endTime || "",
+                lunchStart: s.lunchStart || "",
+                lunchEnd: s.lunchEnd || "",
+                slotInterval: s.slotInterval || DEFAULT_SLOT_INTERVAL
+            };
         }
     } catch (e) {
         console.error("Error loading professional settings:", e);
     }
-    return { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
+    return { startTime: "", endTime: "", lunchStart: "", lunchEnd: "", slotInterval: DEFAULT_SLOT_INTERVAL };
 }
 
 // ── Load professional profile ──────────────────────────────
@@ -233,9 +251,10 @@ export function isOutsideBusinessHours(time, config) {
 }
 
 // ── Populate a <select> with time slot options ─────────────
-export function populateTimeSelect(selectEl) {
+export function populateTimeSelect(selectEl, slots) {
     selectEl.innerHTML = '';
-    TIME_SLOTS.forEach(t => {
+    const list = slots || generateTimeSlots();
+    list.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t;
         opt.textContent = t;

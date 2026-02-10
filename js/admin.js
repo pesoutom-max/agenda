@@ -4,10 +4,11 @@ import {
     getDocs, writeBatch, updateDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
-    STATUS, TIME_SLOTS, sanitize, showToast, renderCalendar,
+    STATUS, sanitize, showToast, renderCalendar,
     isOutsideBusinessHours, formatDateYMD, populateTimeSelect, DAY_NAMES_SHORT,
     proDoc, apptCollection, blocksCollection, apptDoc, blockDoc,
-    loadProfessionalSettings, loadProfessionalProfile
+    loadProfessionalSettings, loadProfessionalProfile,
+    generateTimeSlots, DEFAULT_SLOT_INTERVAL
 } from './shared.js';
 
 // ── Read professional ID from URL ───────────────────────────
@@ -38,17 +39,14 @@ async function init() {
         return;
     }
 
-    // Show professional name on PIN screen
     const pinProName = document.getElementById('pin-pro-name');
     if (pinProName) pinProName.textContent = `Ingresa tu PIN, ${profile.name}`;
 
-    // Set agendar link
     if (agendarLink) {
         const base = window.location.pathname.replace('admin.html', '');
         agendarLink.href = `${base}index.html?pro=${PRO_ID}`;
     }
 
-    // Check session
     if (sessionStorage.getItem(PIN_SESSION_KEY) === 'true') {
         showDashboard();
     }
@@ -107,7 +105,6 @@ document.getElementById('btn-change-pin')?.addEventListener('click', async () =>
         document.getElementById('new-pin').value = '';
         document.getElementById('confirm-pin').value = '';
     } catch (e) {
-        console.error("Error changing PIN:", e);
         showToast("Error al cambiar el PIN.", "error");
     }
 });
@@ -128,7 +125,9 @@ let currentMonth = new Date();
 let currentData = { appointments: [], blocks: [] };
 let appointmentsByDay = {};
 let blocksByDay = {};
-let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" };
+let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "", slotInterval: DEFAULT_SLOT_INTERVAL };
+let timeSlots = generateTimeSlots(DEFAULT_SLOT_INTERVAL);
+let proServices = [];
 
 let unsubDateApp = null;
 let unsubDateBlock = null;
@@ -149,7 +148,10 @@ async function initDashboard() {
     dashboardInitialized = true;
 
     picker.value = TODAY_STR;
+    const profile = await loadProfessionalProfile(db, PRO_ID);
     configData = await loadProfessionalSettings(db, PRO_ID);
+    timeSlots = generateTimeSlots(configData.slotInterval);
+    proServices = (profile && profile.services) ? profile.services : [];
     loadDateData();
     listenMonthIndicators();
 }
@@ -240,14 +242,13 @@ function renderAll() {
 function renderTimeGrid() {
     adminTimeGrid.innerHTML = '';
 
-    TIME_SLOTS.forEach(time => {
+    timeSlots.forEach(time => {
         const isAppointed = currentData.appointments.find(a => a.time === time && a.status === STATUS.CONFIRMED);
         const isBlockedByDay = currentData.blocks.find(b => b.time === time || b.time === 'all');
         const isGlobalBlocked = isOutsideBusinessHours(time, configData);
-        const isBlocked = isBlockedByDay || isGlobalBlocked;
 
         const slot = document.createElement('div');
-        slot.className = `time-slot time-slot--admin`;
+        slot.className = 'time-slot time-slot--admin';
         if (isAppointed) slot.classList.add('active');
         if (isGlobalBlocked) slot.classList.add('time-slot--global-blocked');
         else if (isBlockedByDay) slot.classList.add('time-slot--manual-blocked');
@@ -334,7 +335,6 @@ async function toggleBlock(time, currentlyBlocked) {
             await setDoc(blockDoc(db, PRO_ID, `${date}_${time}`), { date, time, createdAt: new Date() });
         }
     } catch (e) {
-        console.error("Error toggling block:", e);
         showToast("Error al modificar el bloqueo.", "error");
     }
 }
@@ -366,12 +366,13 @@ document.getElementById('btn-unblock-day')?.addEventListener('click', async () =
 // ── Edit modal ─────────────────────────────────────────────
 const editModal = document.getElementById('edit-modal');
 const editTimeSelect = document.getElementById('edit-time');
-populateTimeSelect(editTimeSelect);
+populateTimeSelect(editTimeSelect, timeSlots);
 
 function openEdit(id) {
     const app = currentData.appointments.find(a => a.id === id);
     if (!app) return;
 
+    populateTimeSelect(editTimeSelect, timeSlots);
     document.getElementById('edit-id').value = id;
     document.getElementById('edit-name').value = app.patientName || '';
     document.getElementById('edit-phone').value = app.patientPhone || '';
@@ -427,9 +428,9 @@ async function cancelApp(id) {
 }
 
 // ── Tab navigation ─────────────────────────────────────────
-const tabs = { agenda: 'tab-content-agenda', reminders: 'tab-content-reminders', settings: 'tab-content-settings' };
+const tabMap = { agenda: 'tab-content-agenda', reminders: 'tab-content-reminders', settings: 'tab-content-settings' };
 const titles = { agenda: 'Agenda', reminders: 'Avisos', settings: 'Configuraci\u00f3n' };
-const subtitles = { agenda: 'Gestiona bloqueos y fechas', reminders: 'Seguimiento y recordatorios', settings: 'Horarios y acceso' };
+const subtitles = { agenda: 'Gestiona bloqueos y fechas', reminders: 'Seguimiento y recordatorios', settings: 'Horarios, servicios y acceso' };
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -439,11 +440,11 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        Object.values(tabs).forEach(id => {
+        Object.values(tabMap).forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
-        const targetEl = document.getElementById(tabs[tab]);
+        const targetEl = document.getElementById(tabMap[tab]);
         if (targetEl) targetEl.style.display = 'block';
 
         document.getElementById('dashboard-title').textContent = titles[tab];
@@ -457,26 +458,38 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ── Settings ───────────────────────────────────────────────
 function fillSettingsSelects() {
+    const interval = parseInt(document.getElementById('set-interval').value) || DEFAULT_SLOT_INTERVAL;
+    const slots = generateTimeSlots(interval);
     ['set-start', 'set-end', 'set-lunch-start', 'set-lunch-end'].forEach(id => {
         const s = document.getElementById(id);
+        const prev = s.value;
         s.innerHTML = '<option value="">Ninguno</option>';
-        TIME_SLOTS.forEach(t => {
+        slots.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t;
             opt.textContent = t;
             s.appendChild(opt);
         });
+        s.value = prev;
     });
 }
 
+// Re-fill selects when interval changes
+document.getElementById('set-interval')?.addEventListener('change', fillSettingsSelects);
+
 async function loadSettingsUI() {
-    fillSettingsSelects();
     configData = await loadProfessionalSettings(db, PRO_ID);
+    document.getElementById('set-interval').value = configData.slotInterval || DEFAULT_SLOT_INTERVAL;
+    fillSettingsSelects();
     document.getElementById('set-start').value = configData.startTime || "";
     document.getElementById('set-end').value = configData.endTime || "";
     document.getElementById('set-lunch-start').value = configData.lunchStart || "";
     document.getElementById('set-lunch-end').value = configData.lunchEnd || "";
-    renderAll();
+
+    // Load services
+    const profile = await loadProfessionalProfile(db, PRO_ID);
+    proServices = (profile && profile.services) ? profile.services : [];
+    renderServicesList();
 }
 
 document.getElementById('btn-save-settings')?.addEventListener('click', async () => {
@@ -484,20 +497,86 @@ document.getElementById('btn-save-settings')?.addEventListener('click', async ()
     btn.disabled = true;
     btn.innerText = 'Guardando...';
     try {
+        const newInterval = parseInt(document.getElementById('set-interval').value) || DEFAULT_SLOT_INTERVAL;
         const newSettings = {
             startTime: document.getElementById('set-start').value,
             endTime: document.getElementById('set-end').value,
             lunchStart: document.getElementById('set-lunch-start').value,
-            lunchEnd: document.getElementById('set-lunch-end').value
+            lunchEnd: document.getElementById('set-lunch-end').value,
+            slotInterval: newInterval
         };
         await updateDoc(proDoc(db, PRO_ID), { settings: newSettings });
         configData = newSettings;
+        timeSlots = generateTimeSlots(newInterval);
         showToast("Configuraci\u00f3n guardada.", "success");
     } catch (e) {
         showToast("Error al guardar.", "error");
     } finally {
         btn.disabled = false;
         btn.innerText = 'Guardar Configuraci\u00f3n';
+    }
+});
+
+// ── Services CRUD ──────────────────────────────────────────
+const servicesList = document.getElementById('services-list');
+
+function renderServicesList() {
+    servicesList.innerHTML = '';
+    if (proServices.length === 0) {
+        servicesList.innerHTML = '<p class="text-muted">No hay servicios configurados.</p>';
+        return;
+    }
+    proServices.forEach((svc, idx) => {
+        const row = document.createElement('div');
+        row.className = 'svc-row';
+        row.innerHTML = `
+            <div class="svc-info">
+                <span class="svc-name">${sanitize(svc.name)}</span>
+                <span class="svc-duration">${svc.duration} min</span>
+            </div>
+            <button class="btn-cancel-outline btn-remove-svc" data-idx="${idx}">Eliminar</button>
+        `;
+        servicesList.appendChild(row);
+    });
+}
+
+servicesList?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-remove-svc');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    proServices.splice(idx, 1);
+    try {
+        await updateDoc(proDoc(db, PRO_ID), { services: proServices });
+        renderServicesList();
+        showToast("Servicio eliminado.", "success");
+    } catch (e) {
+        showToast("Error al eliminar servicio.", "error");
+    }
+});
+
+document.getElementById('btn-add-service')?.addEventListener('click', async () => {
+    const name = document.getElementById('svc-name').value.trim();
+    const duration = parseInt(document.getElementById('svc-duration').value);
+
+    if (!name) { showToast("Ingresa el nombre del servicio.", "error"); return; }
+    if (!duration || duration < 5) { showToast("La duraci\u00f3n debe ser al menos 5 minutos.", "error"); return; }
+
+    const btn = document.getElementById('btn-add-service');
+    btn.disabled = true;
+    btn.innerText = 'Guardando...';
+
+    try {
+        proServices.push({ name, duration });
+        await updateDoc(proDoc(db, PRO_ID), { services: proServices });
+        document.getElementById('svc-name').value = '';
+        document.getElementById('svc-duration').value = '';
+        renderServicesList();
+        showToast("Servicio agregado.", "success");
+    } catch (e) {
+        showToast("Error al agregar servicio.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Agregar Servicio';
     }
 });
 
