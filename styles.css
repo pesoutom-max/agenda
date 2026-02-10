@@ -78,9 +78,19 @@ h1 {
 }
 
 /* ── Utility classes ─────────────────────────────────── */
-.text-muted { color: var(--text-muted); font-size: 0.9rem; }
-.text-center { text-align: center; padding: 20px; }
-.loading-text { padding: 20px; }
+.text-muted {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.text-center {
+    text-align: center;
+    padding: 20px;
+}
+
+.loading-text {
+    padding: 20px;
+}
 
 /* ── Cards ───────────────────────────────────────────── */
 .card-list {
@@ -133,8 +143,14 @@ h1 {
     font-family: inherit;
 }
 
-.btn-primary:active { opacity: 0.8; }
-.btn-primary:disabled { background: var(--border); cursor: not-allowed; }
+.btn-primary:active {
+    opacity: 0.8;
+}
+
+.btn-primary:disabled {
+    background: var(--border);
+    cursor: not-allowed;
+}
 
 .btn-secondary {
     background: transparent;
@@ -150,9 +166,13 @@ h1 {
     font-family: inherit;
 }
 
-.btn-danger { background: var(--danger); }
+.btn-danger {
+    background: var(--danger);
+}
 
-.btn-dark { background: var(--text-main); }
+.btn-dark {
+    background: var(--text-main);
+}
 
 .btn-back {
     background: none;
@@ -166,7 +186,9 @@ h1 {
     font-family: inherit;
 }
 
-.btn-back:hover { opacity: 0.7; }
+.btn-back:hover {
+    opacity: 0.7;
+}
 
 /* ── Admin action buttons (inline) ───────────────────── */
 .btn-edit,
@@ -328,8 +350,15 @@ h1 {
     border-color: var(--danger);
 }
 
-.slot-time { font-weight: 700; }
-.slot-status { font-size: 0.7rem; opacity: 0.7; }
+.slot-time {
+    font-weight: 700;
+}
+
+.slot-status {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
 .slot-toggle-btn {
     margin-top: 8px;
     width: 100%;
@@ -341,7 +370,11 @@ h1 {
     cursor: pointer;
     font-family: inherit;
 }
-.slot-toggle-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.slot-toggle-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
 
 /* ── Grid messages ───────────────────────────────────── */
 .grid-message {
@@ -350,8 +383,14 @@ h1 {
     font-size: 0.8rem;
     padding: 12px 0;
 }
-.grid-message--loading { color: var(--text-muted); }
-.grid-message--error { color: var(--danger); }
+
+.grid-message--loading {
+    color: var(--text-muted);
+}
+
+.grid-message--error {
+    color: var(--danger);
+}
 
 /* ── Animations ──────────────────────────────────────── */
 .fade-in {
@@ -359,8 +398,15 @@ h1 {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ── Professional View ───────────────────────────────── */
@@ -761,7 +807,9 @@ h1 {
     border-left: 4px solid var(--text-main);
 }
 
-.settings-card h3 { margin-bottom: 4px; }
+.settings-card h3 {
+    margin-bottom: 4px;
+}
 
 .settings-description {
     font-size: 0.8rem;
@@ -780,7 +828,9 @@ h1 {
     gap: 10px;
 }
 
-.settings-row .form-group { flex: 1; }
+.settings-row .form-group {
+    flex: 1;
+}
 
 /* ── RUT info text ───────────────────────────────────── */
 .rut-description {
@@ -825,10 +875,21 @@ h1 {
     transform: translateY(0);
 }
 
-.toast-info { background: var(--primary); }
-.toast-success { background: var(--secondary); }
-.toast-error { background: var(--danger); }
-.toast-warning { background: var(--warning); }
+.toast-info {
+    background: var(--primary);
+}
+
+.toast-success {
+    background: var(--secondary);
+}
+
+.toast-error {
+    background: var(--danger);
+}
+
+.toast-warning {
+    background: var(--warning);
+}
 
 /* ── PIN Screen ──────────────────────────────────────── */
 .pin-container {
@@ -880,13 +941,23 @@ h1 {
 }
 
 /* ── Appointments section ────────────────────────────── */
-.appointments-section-hidden { display: none; }
+.appointments-section-hidden {
+    display: none;
+}
 
-.calendar-wrapper { margin-bottom: 24px; }
+.calendar-wrapper {
+    margin-bottom: 24px;
+}
 
-.appointment-info { min-width: 0; flex: 1; }
+.appointment-info {
+    min-width: 0;
+    flex: 1;
+}
 
-.reminder-info { min-width: 0; flex: 1; }
+.reminder-info {
+    min-width: 0;
+    flex: 1;
+}
 
 /* ── Mobile optimizations ────────────────────────────── */
 html {
@@ -1097,6 +1168,12 @@ body {
 }
 
 .pro-list-slug {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.pro-list-detail {
     font-size: 0.8rem;
     color: var(--text-muted);
     margin-top: 2px;

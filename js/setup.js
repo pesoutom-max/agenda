@@ -91,6 +91,8 @@ async function loadProfessionals() {
                     <div class="pro-list-info">
                         <div class="pro-list-name">${sanitize(pro.name)}</div>
                         <div class="pro-list-slug">ID: ${sanitize(pro.id)}</div>
+                        ${pro.phone ? `<div class="pro-list-detail">📞 ${sanitize(pro.phone)}</div>` : ''}
+                        ${pro.email ? `<div class="pro-list-detail">✉️ ${sanitize(pro.email)}</div>` : ''}
                         <div class="pro-list-links">
                             <a href="${bookingUrl}" target="_blank" class="pro-link">Reserva</a>
                             <a href="${adminUrl}" target="_blank" class="pro-link pro-link--admin">Admin</a>
@@ -112,6 +114,8 @@ async function loadProfessionals() {
 // ── Create professional ─────────────────────────────────────
 document.getElementById('btn-create-pro')?.addEventListener('click', async () => {
     const name = document.getElementById('pro-name').value.trim();
+    const phone = document.getElementById('pro-phone').value.trim();
+    const email = document.getElementById('pro-email').value.trim();
     const slug = document.getElementById('pro-slug').value.trim().toLowerCase();
     const pin = document.getElementById('pro-pin').value.trim();
 
@@ -141,6 +145,8 @@ document.getElementById('btn-create-pro')?.addEventListener('click', async () =>
 
         await setDoc(doc(db, "professionals", slug), {
             name,
+            phone,
+            email,
             slug,
             pin,
             settings: { startTime: "", endTime: "", lunchStart: "", lunchEnd: "", slotInterval: 45 },
@@ -150,6 +156,8 @@ document.getElementById('btn-create-pro')?.addEventListener('click', async () =>
 
         showToast("Profesional creado exitosamente.", "success");
         document.getElementById('pro-name').value = '';
+        document.getElementById('pro-phone').value = '';
+        document.getElementById('pro-email').value = '';
         document.getElementById('pro-slug').value = '';
         document.getElementById('pro-pin').value = '';
         loadProfessionals();
