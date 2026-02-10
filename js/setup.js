@@ -143,7 +143,8 @@ document.getElementById('btn-create-pro')?.addEventListener('click', async () =>
             name,
             slug,
             pin,
-            settings: { startTime: "", endTime: "", lunchStart: "", lunchEnd: "" },
+            settings: { startTime: "", endTime: "", lunchStart: "", lunchEnd: "", slotInterval: 45 },
+            services: [],
             createdAt: serverTimestamp()
         });
 
