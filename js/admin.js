@@ -284,19 +284,18 @@ function renderAppointments() {
         const card = document.createElement('div');
         card.className = 'pro-card';
 
-        const notesHtml = app.notes
-            ? `<div class="appointment-notes"><span class="notes-icon">&#128221;</span> ${sanitize(app.notes)}</div>`
+        const notesDot = app.notes
+            ? `<span class="notes-dot" title="Tiene observaciones"></span>`
             : '';
 
         card.innerHTML = `
             <div class="appointment-row">
                 <div class="appointment-info">
-                    <div class="time">${sanitize(app.time)}</div>
+                    <div class="time">${sanitize(app.time)} ${notesDot}</div>
                     <div class="name">${sanitize(app.patientName)}</div>
                     <div class="service">${sanitize(app.serviceName)}</div>
                     ${app.patientRut ? `<div class="detail">RUT: ${sanitize(app.patientRut)}</div>` : ''}
                     <div class="detail">Tel: ${sanitize(app.patientPhone || 'N/A')}</div>
-                    ${notesHtml}
                 </div>
                 <div class="appointment-actions appointment-actions--vertical">
                     <button class="btn-edit-outline" data-id="${app.id}">Editar</button>

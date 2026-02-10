@@ -1068,21 +1068,15 @@ body {
     border-color: var(--primary);
 }
 
-/* ── Appointment notes display ──────────────────────── */
-.appointment-notes {
-    margin-top: 6px;
-    padding: 8px 10px;
-    background: var(--primary-soft);
-    border-radius: 8px;
-    font-size: 0.8rem;
-    color: var(--text-main);
-    line-height: 1.4;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-
-.notes-icon {
-    margin-right: 4px;
+/* ── Notes indicator dot ────────────────────────────── */
+.notes-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--secondary);
+    border-radius: 50%;
+    margin-left: 6px;
+    vertical-align: middle;
 }
 
 /* ── Setup page: professional list ──────────────────── */
