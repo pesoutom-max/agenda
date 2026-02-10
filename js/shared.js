@@ -76,10 +76,12 @@ export async function loadProfessionalProfile(db, proId) {
     try {
         const snap = await getDoc(proDoc(db, proId));
         if (snap.exists()) return { id: snap.id, ...snap.data() };
+        return null;
     } catch (e) {
         console.error("Error loading professional:", e);
+        // Re-throw so callers can distinguish "not found" from "error"
+        throw e;
     }
-    return null;
 }
 
 // ── Sanitization (XSS prevention) ──────────────────────────

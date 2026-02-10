@@ -32,7 +32,20 @@ async function init() {
         return;
     }
 
-    const profile = await loadProfessionalProfile(db, PRO_ID);
+    let profile;
+    try {
+        profile = await loadProfessionalProfile(db, PRO_ID);
+    } catch (e) {
+        // Firestore error (likely security rules)
+        pinScreen.style.display = 'none';
+        errorScreen.style.display = 'block';
+        const errTitle = errorScreen.querySelector('h1');
+        const errSub = errorScreen.querySelector('.subtitle');
+        if (errTitle) errTitle.textContent = 'Error de acceso';
+        if (errSub) errSub.textContent = 'No se pudo conectar a la base de datos. Verifica las reglas de Firestore en la consola de Firebase.';
+        return;
+    }
+
     if (!profile) {
         pinScreen.style.display = 'none';
         errorScreen.style.display = 'block';

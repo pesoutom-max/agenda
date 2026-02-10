@@ -46,7 +46,19 @@ async function init() {
         return;
     }
 
-    const profile = await loadProfessionalProfile(db, PRO_ID);
+    let profile;
+    try {
+        profile = await loadProfessionalProfile(db, PRO_ID);
+    } catch (e) {
+        const errScreen = document.getElementById('screen-error');
+        const errTitle = errScreen?.querySelector('h1');
+        const errSub = errScreen?.querySelector('.subtitle');
+        if (errTitle) errTitle.textContent = 'Error de acceso';
+        if (errSub) errSub.textContent = 'No se pudo conectar a la base de datos. Verifica las reglas de Firestore.';
+        goTo('screen-error');
+        return;
+    }
+
     if (!profile) {
         goTo('screen-error');
         return;
