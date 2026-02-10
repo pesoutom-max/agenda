@@ -48,37 +48,12 @@
                 <button class="btn-primary" id="btn-start">Reservar ahora</button>
             </section>
 
-            <!-- Screen 2: Services -->
+            <!-- Screen 2: Services (dynamic from professional config) -->
             <section id="screen-services" class="fade-in" style="display: none;">
                 <button class="btn-back" id="btn-back-services">&larr; Volver</button>
                 <h1>&iquest;Qu&eacute; atenci&oacute;n necesitas?</h1>
                 <p class="subtitle">Selecciona un servicio para continuar</p>
-                <div class="card-list">
-                    <div class="selectable-card" data-service="Limpieza dental" data-duration="30 min">
-                        <div>
-                            <h3>Limpieza dental</h3>
-                            <span>30 min</span>
-                        </div>
-                    </div>
-                    <div class="selectable-card" data-service="Consulta general" data-duration="45 min">
-                        <div>
-                            <h3>Consulta general</h3>
-                            <span>45 min</span>
-                        </div>
-                    </div>
-                    <div class="selectable-card" data-service="Control" data-duration="30 min">
-                        <div>
-                            <h3>Control</h3>
-                            <span>30 min</span>
-                        </div>
-                    </div>
-                    <div class="selectable-card" data-service="Urgencia" data-duration="60 min">
-                        <div>
-                            <h3>Urgencia</h3>
-                            <span>60 min</span>
-                        </div>
-                    </div>
-                </div>
+                <div class="card-list" id="services-card-list"></div>
                 <button class="btn-primary" id="btn-services" disabled>Continuar</button>
             </section>
 
