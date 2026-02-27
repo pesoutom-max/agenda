@@ -19,6 +19,7 @@ let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "", slo
 let timeSlots = generateTimeSlots(DEFAULT_SLOT_INTERVAL);
 let currentMonth = new Date();
 let wpUrl = '';
+let proPhone = '';
 
 // ── DOM references ─────────────────────────────────────────
 const calendarRoot = document.getElementById('calendar-root');
@@ -67,6 +68,9 @@ async function init() {
     // Show professional name in header
     const headerName = document.getElementById('header-pro-name');
     if (headerName) headerName.textContent = profile.name;
+
+    // Load professional phone for WA routing
+    proPhone = profile.phone || '';
 
     configData = await loadProfessionalSettings(db, PRO_ID);
     timeSlots = generateTimeSlots(configData.slotInterval);
@@ -318,13 +322,28 @@ async function saveRutAndFinish() {
         });
 
         const msg = `Su hora ha sido agendada para ${bookingData.service} el d\u00eda ${bookingData.date} a las ${bookingData.time}. Muchas gracias`;
-        wpUrl = `https://wa.me/56${bookingData.phone}?text=${encodeURIComponent(msg)}`;
+
+        // Si el profesional no tiene teléfono registrado, redirigir sin enviar o enviar a un default configurable. 
+        // Idealmente siempre tendrá el teléfono en su profile.
+        if (proPhone) {
+            wpUrl = `https://wa.me/56${proPhone}?text=${encodeURIComponent(msg)}`;
+        } else {
+            console.warn("Profesional no tiene teléfono configurado para recibir confirmaciones de WhatsApp.");
+            wpUrl = '';
+        }
 
         document.getElementById('success-detail').textContent =
             `Te esperamos el ${bookingData.date} a las ${bookingData.time}.`;
         goTo('screen-success');
 
-        setTimeout(() => { window.location.href = wpUrl; }, 3000);
+        if (wpUrl) {
+            document.querySelector('.success-wp-hint').style.display = 'block';
+            document.getElementById('btn-open-wp').style.display = 'inline-block';
+            setTimeout(() => { window.location.href = wpUrl; }, 3000);
+        } else {
+            document.querySelector('.success-wp-hint').style.display = 'none';
+            document.getElementById('btn-open-wp').style.display = 'none';
+        }
     } catch (e) {
         console.error("Error finishing booking:", e);
         showToast("Hubo un error al guardar la reserva. Int\u00e9ntalo de nuevo.", "error");
