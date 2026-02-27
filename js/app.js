@@ -14,11 +14,11 @@ const params = new URLSearchParams(window.location.search);
 const PRO_ID = params.get('pro');
 
 // ── State ──────────────────────────────────────────────────
-let bookingData = { service: '', date: '', time: '', name: '', phone: '', email: '' };
+let bookingData = { service: '', duration: 30, date: '', time: '', name: '', phone: '', email: '' };
 let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "", slotInterval: DEFAULT_SLOT_INTERVAL };
 let timeSlots = generateTimeSlots(DEFAULT_SLOT_INTERVAL);
 let currentMonth = new Date();
-let wpUrl = '';
+let gcalUrl = '';
 let proPhone = '';
 
 // ── DOM references ─────────────────────────────────────────
@@ -106,6 +106,7 @@ function renderServices(services) {
 
         card.addEventListener('click', () => {
             bookingData.service = svc.name;
+            bookingData.duration = svc.duration || 30;
             servicesCardList.querySelectorAll('.selectable-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
             btnServices.disabled = false;
@@ -138,7 +139,9 @@ btnServices?.addEventListener('click', () => goTo('screen-date'));
 btnTime?.addEventListener('click', () => goTo('screen-data'));
 document.getElementById('btn-confirm')?.addEventListener('click', confirmBooking);
 document.getElementById('btn-save-rut')?.addEventListener('click', saveRutAndFinish);
-document.getElementById('btn-open-wp')?.addEventListener('click', () => { window.location.href = wpUrl; });
+document.getElementById('btn-add-gcal')?.addEventListener('click', () => {
+    if (gcalUrl) window.open(gcalUrl, '_blank');
+});
 document.getElementById('btn-cancel-confirm')?.addEventListener('click', confirmCancellation);
 document.getElementById('btn-cancel-keep')?.addEventListener('click', () => goTo('screen-start'));
 document.getElementById('btn-new-appointment')?.addEventListener('click', () => location.reload());
@@ -321,29 +324,28 @@ async function saveRutAndFinish() {
             createdAt: serverTimestamp()
         });
 
-        const msg = `Su hora ha sido agendada para ${bookingData.service} el d\u00eda ${bookingData.date} a las ${bookingData.time}. Muchas gracias`;
+        // Generar enlace de Google Calendar
+        const startDateObj = new Date(`${bookingData.date}T${bookingData.time}:00`);
+        const endDateObj = new Date(startDateObj.getTime() + bookingData.duration * 60000);
 
-        // Si el profesional no tiene teléfono registrado, redirigir sin enviar o enviar a un default configurable. 
-        // Idealmente siempre tendrá el teléfono en su profile.
-        if (proPhone) {
-            wpUrl = `https://wa.me/56${proPhone}?text=${encodeURIComponent(msg)}`;
-        } else {
-            console.warn("Profesional no tiene teléfono configurado para recibir confirmaciones de WhatsApp.");
-            wpUrl = '';
-        }
+        const formatGCalDate = (d) => {
+            // Convierte a formato YYYYMMDDTHHMMSSZ (UTC)
+            return d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+        };
+
+        const startStr = formatGCalDate(startDateObj);
+        const endStr = formatGCalDate(endDateObj);
+
+        const proName = document.getElementById('header-pro-name').textContent;
+        const gcalTitle = `Cita: ${bookingData.service}`;
+        const gcalDetails = `Cita agendada con ${proName} a través de FacilPyme.\\nPaciente: ${bookingData.name}\\nTeléfono: ${bookingData.phone}`;
+
+        gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(gcalTitle)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(gcalDetails)}`;
 
         document.getElementById('success-detail').textContent =
             `Te esperamos el ${bookingData.date} a las ${bookingData.time}.`;
         goTo('screen-success');
 
-        if (wpUrl) {
-            document.querySelector('.success-wp-hint').style.display = 'block';
-            document.getElementById('btn-open-wp').style.display = 'inline-block';
-            setTimeout(() => { window.location.href = wpUrl; }, 3000);
-        } else {
-            document.querySelector('.success-wp-hint').style.display = 'none';
-            document.getElementById('btn-open-wp').style.display = 'none';
-        }
     } catch (e) {
         console.error("Error finishing booking:", e);
         showToast("Hubo un error al guardar la reserva. Int\u00e9ntalo de nuevo.", "error");
