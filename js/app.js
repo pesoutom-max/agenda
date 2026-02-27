@@ -26,7 +26,7 @@ const datePicker = document.getElementById('date-picker');
 const timeContainer = document.getElementById('time-selection-container');
 const patientTimeGrid = document.getElementById('patient-time-grid');
 const btnServices = document.getElementById('btn-services');
-const btnDatetime = document.getElementById('btn-datetime');
+const btnTime = document.getElementById('btn-time');
 const servicesCardList = document.getElementById('services-card-list');
 
 // ── Navigation ─────────────────────────────────────────────
@@ -113,8 +113,15 @@ function renderServices(services) {
 
 // ── Back buttons ───────────────────────────────────────────
 document.getElementById('btn-back-services')?.addEventListener('click', () => goTo('screen-start'));
-document.getElementById('btn-back-datetime')?.addEventListener('click', () => goTo('screen-services'));
-document.getElementById('btn-back-data')?.addEventListener('click', () => goTo('screen-datetime'));
+document.getElementById('btn-back-date')?.addEventListener('click', () => goTo('screen-services'));
+document.getElementById('btn-back-time')?.addEventListener('click', () => {
+    // Si retrocede al calendario, limpiamos la selección de hora
+    bookingData.time = '';
+    document.querySelectorAll('.time-slot').forEach(t => t.classList.remove('active'));
+    btnTime.disabled = true;
+    goTo('screen-date');
+});
+document.getElementById('btn-back-data')?.addEventListener('click', () => goTo('screen-time'));
 document.getElementById('btn-back-rut')?.addEventListener('click', () => {
     const btn = document.querySelector('#screen-data .btn-primary');
     if (btn) { btn.disabled = false; btn.innerText = 'Siguiente'; }
@@ -123,13 +130,14 @@ document.getElementById('btn-back-rut')?.addEventListener('click', () => {
 
 // ── Static button handlers ─────────────────────────────────
 document.getElementById('btn-start')?.addEventListener('click', () => goTo('screen-services'));
-btnServices?.addEventListener('click', () => goTo('screen-datetime'));
-btnDatetime?.addEventListener('click', () => goTo('screen-data'));
+btnServices?.addEventListener('click', () => goTo('screen-date'));
+btnTime?.addEventListener('click', () => goTo('screen-data'));
 document.getElementById('btn-confirm')?.addEventListener('click', confirmBooking);
 document.getElementById('btn-save-rut')?.addEventListener('click', saveRutAndFinish);
 document.getElementById('btn-open-wp')?.addEventListener('click', () => { window.location.href = wpUrl; });
 document.getElementById('btn-cancel-confirm')?.addEventListener('click', confirmCancellation);
 document.getElementById('btn-cancel-keep')?.addEventListener('click', () => goTo('screen-start'));
+document.getElementById('btn-new-appointment')?.addEventListener('click', () => location.reload());
 document.querySelectorAll('.btn-reload').forEach(btn => btn.addEventListener('click', () => location.reload()));
 
 // ── Phone input: only digits ───────────────────────────────
@@ -163,14 +171,19 @@ function renderPatientCalendar() {
     });
 }
 
-// ── Check availability for selected date ───────────────────
 async function checkAvailability() {
     const date = datePicker.value;
     if (!date) return;
 
-    timeContainer.style.display = 'block';
+    // Actualizar el título de la fecha en la pantalla de horas
+    const displayDate = new Date(`${date}T12:00:00`);
+    const dateStr = displayDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    document.getElementById('selected-date-display').textContent = dateStr;
+
+    // Avanzar a la pantalla de tiempo y mostrar "cargando"
+    goTo('screen-time');
     patientTimeGrid.innerHTML = '<p class="grid-message grid-message--loading">Cargando disponibilidad...</p>';
-    btnDatetime.disabled = true;
+    btnTime.disabled = true;
 
     try {
         const qApp = query(
@@ -222,7 +235,7 @@ function selectTime(time, el) {
     bookingData.time = time;
     document.querySelectorAll('.time-slot').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    btnDatetime.disabled = false;
+    btnTime.disabled = false;
 }
 
 // ── Confirm booking (step 1: validate patient data) ────────
@@ -286,7 +299,7 @@ async function saveRutAndFinish() {
             showToast("Este horario acaba de ser reservado por otro paciente. Por favor elige otro.", "error");
             btn.disabled = false;
             btn.innerText = 'Confirmar y Agendar';
-            goTo('screen-datetime');
+            goTo('screen-time');
             checkAvailability();
             return;
         }

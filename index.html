@@ -57,9 +57,9 @@
                 <button class="btn-primary" id="btn-services" disabled>Continuar</button>
             </section>
 
-            <!-- Screen 3: Date/Time -->
-            <section id="screen-datetime" class="fade-in" style="display: none;">
-                <button class="btn-back" id="btn-back-datetime">&larr; Volver</button>
+            <!-- Screen 3: Date -->
+            <section id="screen-date" class="fade-in" style="display: none;">
+                <button class="btn-back" id="btn-back-date">&larr; Volver</button>
                 <h1>Elige un d&iacute;a y horario disponible</h1>
                 <p class="subtitle">Mostrando disponibilidad actual</p>
 
@@ -69,96 +69,107 @@
                     <input type="hidden" id="date-picker">
                 </div>
 
-                <div id="time-selection-container" style="display: none;">
-                    <div class="time-grid" id="patient-time-grid"></div>
-                    <button class="btn-primary" id="btn-datetime" disabled>Continuar</button>
-                </div>
-            </section>
+    </div>
+    </section>
 
-            <!-- Screen 4: Patient Data -->
-            <section id="screen-data" class="fade-in" style="display: none;">
-                <button class="btn-back" id="btn-back-data">&larr; Volver</button>
-                <h1>D&eacute;janos tus datos para confirmar la hora</h1>
-                <p class="subtitle">Casi listos...</p>
+    <!-- Screen 3.5: Time -->
+    <section id="screen-time" class="fade-in" style="display: none;">
+        <button class="btn-back" id="btn-back-time">&larr; Volver</button>
+        <h1>Selecciona un horario</h1>
+        <p class="subtitle">Horas disponibles para el <span id="selected-date-display">d&iacute;a seleccionado</span>
+        </p>
 
-                <div class="form-group">
-                    <label>Nombre completo</label>
-                    <input type="text" id="patient-name" placeholder="Ej: Juan P&eacute;rez">
-                </div>
-                <div class="form-group">
-                    <label>Tel&eacute;fono
-                        <span class="label-hint">Ej: 9 1234 5678 (9 d&iacute;gitos)</span>
-                    </label>
-                    <input type="tel" id="patient-phone" maxlength="9" placeholder="9XXXXXXXX">
-                </div>
-                <div class="form-group">
-                    <label>Correo electr&oacute;nico (opcional)
-                        <span class="label-hint">Ej: juan@mail.com</span>
-                    </label>
-                    <input type="email" id="patient-email" placeholder="tu@email.com">
-                </div>
-                <button class="btn-primary" id="btn-confirm">Siguiente</button>
-            </section>
+        <div id="time-selection-container">
+            <div class="time-grid" id="patient-time-grid"></div>
+            <button class="btn-primary" id="btn-time" disabled>Continuar</button>
+        </div>
+    </section>
 
-            <!-- Screen 5: RUT Form -->
-            <section id="screen-rut" class="fade-in" style="display: none;">
-                <button class="btn-back" id="btn-back-rut">&larr; Volver</button>
-                <h1>Informaci&oacute;n Adicional</h1>
-                <p class="rut-description">Para agilizar tu atenci&oacute;n, por favor completa tu RUT.</p>
+    <!-- Screen 4: Patient Data -->
+    <section id="screen-data" class="fade-in" style="display: none;">
+        <button class="btn-back" id="btn-back-data">&larr; Volver</button>
+        <h1>D&eacute;janos tus datos para confirmar la hora</h1>
+        <p class="subtitle">Casi listos...</p>
 
-                <div class="form-group">
-                    <label>RUT
-                        <span class="label-hint">Ej: 12.345.678-9</span>
-                    </label>
-                    <input type="text" id="patient-rut" placeholder="12345678-9">
-                </div>
+        <div class="form-group">
+            <label>Nombre completo</label>
+            <input type="text" id="patient-name" placeholder="Ej: Juan P&eacute;rez">
+        </div>
+        <div class="form-group">
+            <label>Tel&eacute;fono
+                <span class="label-hint">Ej: 9 1234 5678 (9 d&iacute;gitos)</span>
+            </label>
+            <input type="tel" id="patient-phone" maxlength="9" placeholder="9XXXXXXXX">
+        </div>
+        <div class="form-group">
+            <label>Correo electr&oacute;nico (opcional)
+                <span class="label-hint">Ej: juan@mail.com</span>
+            </label>
+            <input type="email" id="patient-email" placeholder="tu@email.com">
+        </div>
+        <button class="btn-primary" id="btn-confirm">Siguiente</button>
+    </section>
 
-                <button class="btn-primary" id="btn-save-rut">Confirmar y Agendar</button>
-            </section>
+    <!-- Screen 5: RUT Form -->
+    <section id="screen-rut" class="fade-in" style="display: none;">
+        <button class="btn-back" id="btn-back-rut">&larr; Volver</button>
+        <h1>Informaci&oacute;n Adicional</h1>
+        <p class="rut-description">Para agilizar tu atenci&oacute;n, por favor completa tu RUT.</p>
 
-            <!-- Screen 6: Success -->
-            <section id="screen-success" class="fade-in" style="display: none;">
-                <div class="success-content">
-                    <div class="success-icon">&#10004;&#65039;</div>
-                    <h1 id="success-message">&iexcl;Tu hora qued&oacute; reservada!</h1>
-                    <p id="success-detail" class="success-detail"></p>
-                    <p class="success-wp-hint">Estamos abriendo WhatsApp para confirmar...</p>
-                    <button class="btn-primary" id="btn-open-wp">Abrir WhatsApp manualmente</button>
-                </div>
-            </section>
+        <div class="form-group">
+            <label>RUT
+                <span class="label-hint">Ej: 12.345.678-9</span>
+            </label>
+            <input type="text" id="patient-rut" placeholder="12345678-9">
+        </div>
 
-            <!-- Screen 7: Cancellation -->
-            <section id="screen-cancel" class="fade-in" style="display: none;">
-                <h1>&iquest;Deseas cancelar tu hora?</h1>
-                <p class="subtitle">Esta acci&oacute;n liberar&aacute; el cupo para otro paciente.</p>
-                <div class="cancel-info">
-                    <p><strong>Cita:</strong> <span id="cancel-service">Consulta general</span></p>
-                    <p><strong>Fecha/Hora:</strong> <span id="cancel-datetime">Martes 27, 10:30 AM</span></p>
-                </div>
-                <button class="btn-primary btn-danger" id="btn-cancel-confirm">Confirmar Cancelaci&oacute;n</button>
-                <button class="btn-secondary" id="btn-cancel-keep">Mantener mi hora</button>
-            </section>
+        <button class="btn-primary" id="btn-save-rut">Confirmar y Agendar</button>
+    </section>
 
-            <!-- Screen 8: Cancel Success -->
-            <section id="screen-cancel-success" class="fade-in" style="display: none;">
-                <div class="success-content">
-                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="15" y1="9" x2="9" y2="15"></line>
-                        <line x1="9" y1="9" x2="15" y2="15"></line>
-                    </svg>
-                </div>
-                <h1 style="text-align: center;">Tu hora fue cancelada</h1>
-                <p class="subtitle" style="text-align: center;">Gracias por avisar con tiempo.</p>
-                <div class="cancel-msg-box">
-                    <p class="cancel-msg-label">Mensaje al Profesional:</p>
-                    <p class="cancel-msg-text">&quot;La hora de <span class="wa-name-c">Paciente</span> del <span
-                            class="wa-datetime-c">--</span> fue liberada.&quot;</p>
-                </div>
-                <button class="btn-primary btn-reload">Solicitar nueva hora</button>
-            </section>
-        </main>
+    <!-- Screen 6: Success -->
+    <section id="screen-success" class="fade-in" style="display: none;">
+        <div class="success-content">
+            <div class="success-icon">&#10004;&#65039;</div>
+            <h1 id="success-message">&iexcl;Tu hora qued&oacute; reservada!</h1>
+            <p id="success-detail" class="success-detail"></p>
+            <p class="success-wp-hint">Estamos abriendo WhatsApp para confirmar...</p>
+            <button class="btn-primary" id="btn-open-wp">Abrir WhatsApp manualmente</button>
+            <button class="btn-secondary" id="btn-new-appointment" style="margin-top: 12px;">Agendar otra cita</button>
+        </div>
+    </section>
+
+    <!-- Screen 7: Cancellation -->
+    <section id="screen-cancel" class="fade-in" style="display: none;">
+        <h1>&iquest;Deseas cancelar tu hora?</h1>
+        <p class="subtitle">Esta acci&oacute;n liberar&aacute; el cupo para otro paciente.</p>
+        <div class="cancel-info">
+            <p><strong>Cita:</strong> <span id="cancel-service">Consulta general</span></p>
+            <p><strong>Fecha/Hora:</strong> <span id="cancel-datetime">Martes 27, 10:30 AM</span></p>
+        </div>
+        <button class="btn-primary btn-danger" id="btn-cancel-confirm">Confirmar Cancelaci&oacute;n</button>
+        <button class="btn-secondary" id="btn-cancel-keep">Mantener mi hora</button>
+    </section>
+
+    <!-- Screen 8: Cancel Success -->
+    <section id="screen-cancel-success" class="fade-in" style="display: none;">
+        <div class="success-content">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+        </div>
+        <h1 style="text-align: center;">Tu hora fue cancelada</h1>
+        <p class="subtitle" style="text-align: center;">Gracias por avisar con tiempo.</p>
+        <div class="cancel-msg-box">
+            <p class="cancel-msg-label">Mensaje al Profesional:</p>
+            <p class="cancel-msg-text">&quot;La hora de <span class="wa-name-c">Paciente</span> del <span
+                    class="wa-datetime-c">--</span> fue liberada.&quot;</p>
+        </div>
+        <button class="btn-primary btn-reload">Solicitar nueva hora</button>
+    </section>
+    </main>
     </div>
 
     <script src="firebase-config.js"></script>
