@@ -467,9 +467,9 @@ async function cancelApp(id) {
 }
 
 // ── Tab navigation ─────────────────────────────────────────
-const tabMap = { agenda: 'tab-content-agenda', reminders: 'tab-content-reminders', reports: 'tab-content-reports', settings: 'tab-content-settings' };
-const titles = { agenda: 'Agenda', reminders: 'Avisos', reports: 'Reportes y Búsqueda', settings: 'Configuración' };
-const subtitles = { agenda: 'Gestiona bloqueos y fechas', reminders: 'Seguimiento y recordatorios', reports: 'Estadísticas del mes y búsqueda', settings: 'Horarios, servicios y acceso' };
+const tabMap = { agenda: 'tab-content-agenda', reports: 'tab-content-reports', settings: 'tab-content-settings' };
+const titles = { agenda: 'Agenda', reports: 'Reportes y Búsqueda', settings: 'Configuración' };
+const subtitles = { agenda: 'Gestiona bloqueos y fechas', reports: 'Estadísticas del mes y búsqueda', settings: 'Horarios, servicios y acceso' };
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -490,7 +490,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         document.getElementById('dashboard-subtitle').textContent = subtitles[tab];
 
         if (tab === 'agenda') loadDateData();
-        if (tab === 'reminders') loadReminders();
         if (tab === 'reports') loadReportsUI();
         if (tab === 'settings') loadSettingsUI();
     });
