@@ -843,15 +843,15 @@ async function loadReminders() {
 
                 card.style.borderLeftColor = color;
                 card.innerHTML = `
-            < div class="reminder-row" >
+                    <div class="reminder-row">
                         <div class="reminder-info">
                             <span class="reminder-label" style="color: ${color};">${label}</span>
                             <div class="reminder-title">${sanitize(app.time)} - ${sanitize(app.patientName)}</div>
                             <div class="reminder-detail">${sanitize(app.serviceName)}</div>
                         </div>
                         <a href="https://wa.me/56${sanitize(app.patientPhone)}?text=${encodeURIComponent(msg)}" target="_blank" class="btn-whatsapp">WA</a>
-                    </div >
-            `;
+                    </div>
+                `;
                 remindersList.appendChild(card);
             });
     } catch (e) {
