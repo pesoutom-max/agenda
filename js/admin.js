@@ -141,6 +141,7 @@ let blocksByDay = {};
 let configData = { startTime: "", endTime: "", lunchStart: "", lunchEnd: "", slotInterval: DEFAULT_SLOT_INTERVAL };
 let timeSlots = generateTimeSlots(DEFAULT_SLOT_INTERVAL);
 let proServices = [];
+let searchResultsMem = [];
 
 let unsubDateApp = null;
 let unsubDateBlock = null;
@@ -382,7 +383,11 @@ const editTimeSelect = document.getElementById('edit-time');
 populateTimeSelect(editTimeSelect, timeSlots);
 
 function openEdit(id) {
-    const app = currentData.appointments.find(a => a.id === id);
+    let app = currentData.appointments.find(a => a.id === id);
+    if (!app) {
+        app = searchResultsMem.find(a => a.id === id);
+    }
+
     if (!app) return;
 
     populateTimeSelect(editTimeSelect, timeSlots);
@@ -415,6 +420,13 @@ document.getElementById('btn-modal-save')?.addEventListener('click', async () =>
         await updateDoc(apptDoc(db, PRO_ID, id), updates);
         editModal.style.display = 'none';
         showToast("Cita actualizada.", "success");
+
+        // Actualizar UI de memoria si estamos en la pestaña Reportes
+        const tabActive = document.querySelector('.tab-btn[data-tab="reports"]');
+        if (tabActive && tabActive.classList.contains('active')) {
+            document.getElementById('btn-patient-search').click(); // Re-trigger search to show fresh notes
+        }
+
     } catch (e) {
         showToast("Error al actualizar.", "error");
     } finally {
@@ -491,7 +503,8 @@ async function loadReportsUI() {
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            // Filtrar estadísticas por el mes actual usando el string de fecha YYYY-MM-DD
+            // Filtrar estadísticas por el mes actual usando el string de fecha YYYY-MM
+            // Nota: data.date es string YYYY-MM-DD
             if (data.date && data.date.startsWith(monthPrefix)) {
                 monthCount++;
                 const sName = data.serviceName || 'Otro';
@@ -549,6 +562,9 @@ document.getElementById('btn-patient-search')?.addEventListener('click', async (
 
         // Ordenar por fecha de más reciente a más antigua
         matched.sort((a, b) => b.date.localeCompare(a.date));
+
+        // Guardar en memoria global para que la edición lo encuentre
+        searchResultsMem = matched;
 
         if (matched.length === 0) {
             resultsContainer.innerHTML = '<p class="grid-message">No se encontraron citas para este paciente.</p>';
