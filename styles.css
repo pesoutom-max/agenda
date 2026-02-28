@@ -959,6 +959,42 @@ h1 {
     flex: 1;
 }
 
+/* ── Stats and Reports ───────────────────────────────── */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.stat-card {
+    background: var(--bg-main);
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--border);
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.stat-value-text {
+    font-size: 1.1rem;
+    color: var(--text-main);
+    word-break: break-word;
+}
+
 /* ── Mobile optimizations ────────────────────────────── */
 html {
     -webkit-text-size-adjust: 100%;

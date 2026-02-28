@@ -441,9 +441,9 @@ async function cancelApp(id) {
 }
 
 // ── Tab navigation ─────────────────────────────────────────
-const tabMap = { agenda: 'tab-content-agenda', reminders: 'tab-content-reminders', settings: 'tab-content-settings' };
-const titles = { agenda: 'Agenda', reminders: 'Avisos', settings: 'Configuraci\u00f3n' };
-const subtitles = { agenda: 'Gestiona bloqueos y fechas', reminders: 'Seguimiento y recordatorios', settings: 'Horarios, servicios y acceso' };
+const tabMap = { agenda: 'tab-content-agenda', reminders: 'tab-content-reminders', reports: 'tab-content-reports', settings: 'tab-content-settings' };
+const titles = { agenda: 'Agenda', reminders: 'Avisos', reports: 'Reportes y Búsqueda', settings: 'Configuración' };
+const subtitles = { agenda: 'Gestiona bloqueos y fechas', reminders: 'Seguimiento y recordatorios', reports: 'Estadísticas del mes y búsqueda', settings: 'Horarios, servicios y acceso' };
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -465,8 +465,123 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
         if (tab === 'agenda') loadDateData();
         if (tab === 'reminders') loadReminders();
+        if (tab === 'reports') loadReportsUI();
         if (tab === 'settings') loadSettingsUI();
     });
+});
+
+// ── Reports & Search ─────────────────────────────────────────
+async function loadReportsUI() {
+    try {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const monthPrefix = `${year}-${month}`; // YYYY-MM
+
+        // Formatear mes en español
+        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        document.getElementById('report-month-label').textContent = `Resumen de citas de ${monthNames[today.getMonth()]} ${year}`;
+
+        // Obtener historial completo para hacer cálculos en memoria
+        const qApp = query(apptCollection(db, PRO_ID), where("status", "==", STATUS.CONFIRMED));
+        const snapshot = await getDocs(qApp);
+
+        let monthCount = 0;
+        let serviceCounts = {};
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            // Filtrar estadísticas por el mes actual usando el string de fecha YYYY-MM-DD
+            if (data.date && data.date.startsWith(monthPrefix)) {
+                monthCount++;
+                const sName = data.serviceName || 'Otro';
+                serviceCounts[sName] = (serviceCounts[sName] || 0) + 1;
+            }
+        });
+
+        // 1. Mostrar conteo total
+        document.getElementById('stat-total-appointments').textContent = monthCount.toString();
+
+        // 2. Determinar servicio estrella
+        let topService = "-";
+        let maxCount = 0;
+        for (const [sName, count] of Object.entries(serviceCounts)) {
+            if (count > maxCount) {
+                maxCount = count;
+                topService = sName;
+            }
+        }
+        document.getElementById('stat-top-service').textContent = topService;
+
+    } catch (e) {
+        console.error("Error loading reports UI:", e);
+    }
+}
+
+// Búsqueda de historial de paciente
+document.getElementById('btn-patient-search')?.addEventListener('click', async () => {
+    const term = document.getElementById('patient-search-input').value.trim().toLowerCase();
+    const resultsContainer = document.getElementById('search-results-list');
+
+    if (!term) {
+        resultsContainer.innerHTML = '<p class="grid-message">Ingresa un nombre o RUT para buscar.</p>';
+        return;
+    }
+
+    resultsContainer.innerHTML = '<p class="grid-message">Buscando...</p>';
+
+    try {
+        const qApp = query(apptCollection(db, PRO_ID), where("status", "==", STATUS.CONFIRMED));
+        const snapshot = await getDocs(qApp);
+
+        const matched = [];
+        snapshot.forEach(docSnap => {
+            const d = docSnap.data();
+            d.id = docSnap.id;
+            const rutStr = (d.patientRut || '').toLowerCase();
+            const nameStr = (d.patientName || '').toLowerCase();
+            const phoneStr = (d.patientPhone || '').toLowerCase();
+
+            if (nameStr.includes(term) || rutStr.includes(term) || phoneStr.includes(term)) {
+                matched.push(d);
+            }
+        });
+
+        // Ordenar por fecha de más reciente a más antigua
+        matched.sort((a, b) => b.date.localeCompare(a.date));
+
+        if (matched.length === 0) {
+            resultsContainer.innerHTML = '<p class="grid-message">No se encontraron citas para este paciente.</p>';
+            return;
+        }
+
+        resultsContainer.innerHTML = '';
+        matched.forEach(app => {
+            const displayDate = new Date(`${app.date}T12:00:00`);
+            const dateStr = displayDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+            const card = document.createElement('div');
+            card.className = 'pro-card slide-up appointment-card';
+            card.innerHTML = `
+                <div class="appointment-header">
+                    <strong>${sanitize(app.patientName)}</strong>
+                    <span class="appointment-time">${dateStr} &bull; ${app.time}</span>
+                </div>
+                <div class="appointment-details">
+                    <div>Servicio: ${sanitize(app.serviceName)}</div>
+                    ${app.patientRut ? `<div>RUT: ${sanitize(app.patientRut)}</div>` : ''}
+                    <div>Phone: <a href="https://wa.me/56${sanitize(app.patientPhone)}" target="_blank" class="txt-link">${sanitize(app.patientPhone)}</a></div>
+                    ${app.notes ? `<div class="appointment-notes"><strong>Notas:</strong> ${sanitize(app.notes)}</div>` : ''}
+                </div>
+                <!-- Para simplificar, en búsqueda solo se muestra informativo, se editarían en "Agenda" -->
+            `;
+            resultsContainer.appendChild(card);
+        });
+
+    } catch (e) {
+        console.error("Error searching patients:", e);
+        resultsContainer.innerHTML = '<p class="grid-message">Hubo un error al realizar la búsqueda.</p>';
+    }
 });
 
 // ── Settings ───────────────────────────────────────────────

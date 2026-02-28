@@ -32,7 +32,8 @@
                     <h1>Acceso Profesional</h1>
                     <p class="subtitle" id="pin-pro-name"></p>
                     <div class="form-group">
-                        <input type="password" id="pin-input" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric" autocomplete="off">
+                        <input type="password" id="pin-input" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;"
+                            inputmode="numeric" autocomplete="off">
                     </div>
                     <button class="btn-primary" id="btn-pin-submit">Ingresar</button>
                 </div>
@@ -56,6 +57,7 @@
                 <div class="tabs-bar">
                     <button data-tab="agenda" class="tab-btn active">Agenda</button>
                     <button data-tab="reminders" class="tab-btn">Avisos</button>
+                    <button data-tab="reports" class="tab-btn">Reportes</button>
                     <button data-tab="settings" class="tab-btn">Config</button>
                 </div>
 
@@ -85,7 +87,8 @@
                 <div id="tab-content-settings" style="display: none;">
                     <div class="pro-card settings-card">
                         <h3>Horarios Generales</h3>
-                        <p class="settings-description">Define tu ventana de atenci&oacute;n y el intervalo entre citas.</p>
+                        <p class="settings-description">Define tu ventana de atenci&oacute;n y el intervalo entre citas.
+                        </p>
 
                         <div class="form-group">
                             <label>Intervalo entre citas (minutos)</label>
@@ -140,7 +143,8 @@
                         </div>
                         <div class="form-group">
                             <label>Duraci&oacute;n (minutos)</label>
-                            <input type="number" id="svc-duration" placeholder="30" min="5" max="480" inputmode="numeric">
+                            <input type="number" id="svc-duration" placeholder="30" min="5" max="480"
+                                inputmode="numeric">
                         </div>
                         <button class="btn-primary" id="btn-add-service">Agregar Servicio</button>
                     </div>
@@ -150,11 +154,13 @@
                         <p class="settings-description">Modifica el PIN para ingresar al panel.</p>
                         <div class="form-group">
                             <label>Nuevo PIN (4-6 d&iacute;gitos)</label>
-                            <input type="password" id="new-pin" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric">
+                            <input type="password" id="new-pin" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;"
+                                inputmode="numeric">
                         </div>
                         <div class="form-group">
                             <label>Confirmar PIN</label>
-                            <input type="password" id="confirm-pin" maxlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric">
+                            <input type="password" id="confirm-pin" maxlength="6"
+                                placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric">
                         </div>
                         <button class="btn-primary" id="btn-change-pin">Cambiar PIN</button>
                     </div>
@@ -165,6 +171,45 @@
                 <!-- Tab: Reminders -->
                 <div id="tab-content-reminders" style="display: none;">
                     <div id="reminders-list"></div>
+                </div>
+
+                <!-- Tab: Reports & Stats -->
+                <div id="tab-content-reports" style="display: none;">
+                    <!-- Monthly Stats -->
+                    <div class="pro-card settings-card">
+                        <h3>Estad&iacute;sticas del Mes</h3>
+                        <p class="settings-description" id="report-month-label">Resumen de citas agendadas.</p>
+
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <span class="stat-label">Total Citas</span>
+                                <span class="stat-value" id="stat-total-appointments">0</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-label">Servicio Estrella</span>
+                                <span class="stat-value stat-value-text" id="stat-top-service">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Patient Search -->
+                    <div class="pro-card settings-card" style="margin-top: 16px;">
+                        <h3>Buscador de Pacientes</h3>
+                        <p class="settings-description">Encuentra el historial de citas de un paciente en particular.
+                        </p>
+
+                        <div class="form-group">
+                            <label>Nombre completo o RUT</label>
+                            <input type="text" id="patient-search-input" placeholder="Ej: Juan o 12345678-9">
+                        </div>
+                        <button class="btn-primary" id="btn-patient-search" style="margin-bottom: 16px;">Buscar
+                            Historial</button>
+
+                        <!-- Search Results Container -->
+                        <div id="search-results-list" class="appointments-list-container">
+                            <!-- Results inject here via JS -->
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
