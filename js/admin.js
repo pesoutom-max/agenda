@@ -483,18 +483,63 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 // ── Reports & Search ─────────────────────────────────────────
+const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+let reportsInitialized = false;
+
+function initReportsSelectors() {
+    if (reportsInitialized) return;
+    reportsInitialized = true;
+
+    const monthSel = document.getElementById('stat-month-select');
+    const yearSel = document.getElementById('stat-year-select');
+
+    // Populate months
+    MONTH_NAMES.forEach((name, idx) => {
+        const opt = document.createElement('option');
+        opt.value = String(idx + 1).padStart(2, '0');
+        opt.textContent = name;
+        monthSel.appendChild(opt);
+    });
+
+    // Populate years: current year and 2 prior
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear; y >= currentYear - 2; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        yearSel.appendChild(opt);
+    }
+
+    // Default to current month/year
+    const today = new Date();
+    monthSel.value = String(today.getMonth() + 1).padStart(2, '0');
+    yearSel.value = today.getFullYear();
+
+    // Recalculate when the user changes month or year
+    monthSel.addEventListener('change', calcReportStats);
+    yearSel.addEventListener('change', calcReportStats);
+}
+
 async function loadReportsUI() {
+    initReportsSelectors();
+    await calcReportStats();
+}
+
+async function calcReportStats() {
     try {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const monthPrefix = `${year}-${month}`; // YYYY-MM
+        const monthSel = document.getElementById('stat-month-select');
+        const yearSel = document.getElementById('stat-year-select');
+        const month = monthSel.value;   // "01" – "12"
+        const year = yearSel.value;    // "2026"
+        const monthPrefix = `${year}-${month}`; // "2026-02"
 
-        // Formatear mes en español
-        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        document.getElementById('report-month-label').textContent = `Resumen de citas de ${monthNames[today.getMonth()]} ${year}`;
+        // Update label
+        const monthIdx = parseInt(month, 10) - 1;
+        document.getElementById('report-month-label').textContent =
+            `Resumen de citas de ${MONTH_NAMES[monthIdx]} ${year}`;
 
-        // Obtener historial completo para hacer cálculos en memoria
+        // Fetch all confirmed appointments and filter in memory
         const qApp = query(apptCollection(db, PRO_ID), where("status", "==", STATUS.CONFIRMED));
         const snapshot = await getDocs(qApp);
 
@@ -503,8 +548,6 @@ async function loadReportsUI() {
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            // Filtrar estadísticas por el mes actual usando el string de fecha YYYY-MM
-            // Nota: data.date es string YYYY-MM-DD
             if (data.date && data.date.startsWith(monthPrefix)) {
                 monthCount++;
                 const sName = data.serviceName || 'Otro';
@@ -512,24 +555,20 @@ async function loadReportsUI() {
             }
         });
 
-        // 1. Mostrar conteo total
         document.getElementById('stat-total-appointments').textContent = monthCount.toString();
 
-        // 2. Determinar servicio estrella
-        let topService = "-";
+        let topService = monthCount === 0 ? "Sin citas" : "-";
         let maxCount = 0;
         for (const [sName, count] of Object.entries(serviceCounts)) {
-            if (count > maxCount) {
-                maxCount = count;
-                topService = sName;
-            }
+            if (count > maxCount) { maxCount = count; topService = sName; }
         }
         document.getElementById('stat-top-service').textContent = topService;
 
     } catch (e) {
-        console.error("Error loading reports UI:", e);
+        console.error("Error loading report stats:", e);
     }
 }
+
 
 // Búsqueda de historial de paciente
 document.getElementById('btn-patient-search')?.addEventListener('click', async () => {
