@@ -572,8 +572,10 @@ document.getElementById('btn-patient-search')?.addEventListener('click', async (
                     ${app.patientRut ? `<div>RUT: ${sanitize(app.patientRut)}</div>` : ''}
                     <div>Phone: <a href="https://wa.me/56${sanitize(app.patientPhone)}" target="_blank" class="txt-link">${sanitize(app.patientPhone)}</a></div>
                     ${app.notes ? `<div class="appointment-notes"><strong>Notas:</strong> ${sanitize(app.notes)}</div>` : ''}
+                    <div style="margin-top: 10px;">
+                        <button class="btn-edit-outline" data-id="${app.id}" style="width: 100%;">Editar Info. / Notas</button>
+                    </div>
                 </div>
-                <!-- Para simplificar, en búsqueda solo se muestra informativo, se editarían en "Agenda" -->
             `;
             resultsContainer.appendChild(card);
         });
@@ -658,12 +660,12 @@ function renderServicesList() {
         const row = document.createElement('div');
         row.className = 'svc-row';
         row.innerHTML = `
-            <div class="svc-info">
+                < div class="svc-info" >
                 <span class="svc-name">${sanitize(svc.name)}</span>
                 <span class="svc-duration">${svc.duration} min</span>
-            </div>
-            <button class="btn-cancel-outline btn-remove-svc" data-idx="${idx}">Eliminar</button>
-        `;
+            </div >
+                <button class="btn-cancel-outline btn-remove-svc" data-idx="${idx}">Eliminar</button>
+            `;
         servicesList.appendChild(row);
     });
 }
@@ -779,15 +781,15 @@ async function loadReminders() {
 
                 card.style.borderLeftColor = color;
                 card.innerHTML = `
-                    <div class="reminder-row">
+            < div class="reminder-row" >
                         <div class="reminder-info">
                             <span class="reminder-label" style="color: ${color};">${label}</span>
                             <div class="reminder-title">${sanitize(app.time)} - ${sanitize(app.patientName)}</div>
                             <div class="reminder-detail">${sanitize(app.serviceName)}</div>
                         </div>
                         <a href="https://wa.me/56${sanitize(app.patientPhone)}?text=${encodeURIComponent(msg)}" target="_blank" class="btn-whatsapp">WA</a>
-                    </div>
-                `;
+                    </div >
+            `;
                 remindersList.appendChild(card);
             });
     } catch (e) {
