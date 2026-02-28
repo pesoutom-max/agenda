@@ -310,6 +310,12 @@ function renderAppointments() {
             ? `<span class="notes-dot" title="Tiene observaciones"></span>`
             : '';
 
+        // Mensaje de recordatorio pre-armado para WA
+        const appDateObj = new Date(app.date + 'T00:00:00');
+        const dayName = DAY_NAMES_SHORT[appDateObj.getDay()];
+        const waMsg = encodeURIComponent(`Hola ${app.patientName}, te recordamos tu hora del ${dayName} ${app.date} a las ${app.time}. ¡Te esperamos!`);
+        const waUrl = `https://wa.me/56${app.patientPhone}?text=${waMsg}`;
+
         card.innerHTML = `
             <div class="appointment-row">
                 <div class="appointment-info">
@@ -321,6 +327,7 @@ function renderAppointments() {
                 </div>
                 <div class="appointment-actions appointment-actions--vertical">
                     <button class="btn-edit-outline" data-id="${app.id}">Editar</button>
+                    ${app.patientPhone ? `<a href="${waUrl}" target="_blank" class="btn-whatsapp" style="text-align:center;">WA</a>` : ''}
                     <button class="btn-cancel-outline" data-id="${app.id}">Cancelar</button>
                 </div>
             </div>
@@ -722,10 +729,10 @@ function renderServicesList() {
         const row = document.createElement('div');
         row.className = 'svc-row';
         row.innerHTML = `
-                < div class="svc-info" >
+                <div class="svc-info">
                 <span class="svc-name">${sanitize(svc.name)}</span>
                 <span class="svc-duration">${svc.duration} min</span>
-            </div >
+            </div>
                 <button class="btn-cancel-outline btn-remove-svc" data-idx="${idx}">Eliminar</button>
             `;
         servicesList.appendChild(row);
