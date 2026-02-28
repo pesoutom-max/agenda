@@ -166,6 +166,13 @@ async function initDashboard() {
     configData = await loadProfessionalSettings(db, PRO_ID);
     timeSlots = generateTimeSlots(configData.slotInterval);
     proServices = (profile && profile.services) ? profile.services : [];
+
+    // Mostrar nombre en el header
+    if (profile && profile.name) {
+        const headerName = document.getElementById('header-pro-name');
+        if (headerName) headerName.textContent = profile.name;
+    }
+
     loadDateData();
     listenMonthIndicators();
 }
