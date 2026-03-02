@@ -22,4 +22,4 @@ Este proyecto está configurado para desplegarse automáticamente en **GitHub Pa
 - **Profesional**: `pro.html` (Dashboard de citas de hoy).
 - **Administración**: `admin.html` (Gestión de bloqueos y ediciones).
 
-<!-- Trigger deployment fix -->
+<!-- Trigger deployment fix v2 - Settings updated to GitHub Actions -->
