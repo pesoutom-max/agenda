@@ -21,3 +21,5 @@ Este proyecto está configurado para desplegarse automáticamente en **GitHub Pa
 - **Paciente**: `index.html` (Vista principal de reserva).
 - **Profesional**: `pro.html` (Dashboard de citas de hoy).
 - **Administración**: `admin.html` (Gestión de bloqueos y ediciones).
+
+<!-- Trigger deployment fix -->
