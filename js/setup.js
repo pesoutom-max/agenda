@@ -99,7 +99,7 @@ async function loadProfessionals() {
                         </div>
                     </div>
                     <div class="pro-list-actions">
-                        <button class="btn-edit-outline btn-edit-pro" data-id="${pro.id}" data-name="${sanitize(pro.name)}" data-phone="${sanitize(pro.phone || '')}" data-email="${sanitize(pro.email || '')}">Editar</button>
+                        <button class="btn-edit-outline btn-edit-pro" data-id="${pro.id}" data-name="${sanitize(pro.name)}" data-phone="${sanitize(pro.phone || '')}" data-email="${sanitize(pro.email || '')}" data-pin="${sanitize(pro.pin || '')}">Editar</button>
                         <button class="btn-cancel-outline btn-delete-pro" data-id="${pro.id}">Eliminar</button>
                     </div>
                 </div>
@@ -198,6 +198,7 @@ proList.addEventListener('click', (e) => {
         document.getElementById('edit-pro-name').value = editBtn.dataset.name || '';
         document.getElementById('edit-pro-phone').value = editBtn.dataset.phone || '';
         document.getElementById('edit-pro-email').value = editBtn.dataset.email || '';
+        document.getElementById('edit-pro-current-pin').value = editBtn.dataset.pin || '';
         document.getElementById('edit-pro-pin').value = '';
         editModal.style.display = 'flex';
         return;
