@@ -138,6 +138,14 @@ document.getElementById('btn-save-rut')?.addEventListener('click', saveRutAndFin
 document.getElementById('btn-add-gcal')?.addEventListener('click', () => {
     if (gcalUrl) window.open(gcalUrl, '_blank');
 });
+document.getElementById('btn-contact-pro')?.addEventListener('click', () => {
+    const phone = normalizePhone(proPhone);
+    if (!validateChileMobile(phone)) return;
+
+    const proName = document.getElementById('header-pro-name')?.textContent || 'el profesional';
+    const msg = `Hola ${proName}, necesito ayuda con mi reserva del ${bookingData.date} a las ${bookingData.time}. Mi nombre es ${bookingData.name}.`;
+    window.open(`https://wa.me/56${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+});
 document.getElementById('btn-new-appointment')?.addEventListener('click', () => location.reload());
 document.querySelectorAll('.btn-reload').forEach(btn => btn.addEventListener('click', () => location.reload()));
 
@@ -354,6 +362,12 @@ async function saveRutAndFinish() {
 
         document.getElementById('success-detail').textContent =
             `Te esperamos el ${bookingData.date} a las ${bookingData.time}.`;
+
+        const contactBtn = document.getElementById('btn-contact-pro');
+        if (contactBtn && validateChileMobile(proPhone)) {
+            contactBtn.style.display = 'block';
+        }
+
         goTo('screen-success');
 
     } catch (e) {

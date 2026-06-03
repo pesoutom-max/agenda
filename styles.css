@@ -247,6 +247,25 @@ h1 {
     white-space: nowrap;
 }
 
+.btn-whatsapp-public {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 16px;
+    border: none;
+    border-radius: var(--radius);
+    background: #25D366;
+    color: white;
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-whatsapp-public:active {
+    opacity: 0.85;
+}
+
 /* ── Admin day buttons ───────────────────────────────── */
 .admin-day-actions {
     display: flex;
