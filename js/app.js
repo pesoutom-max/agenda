@@ -342,23 +342,32 @@ async function saveRutAndFinish() {
             });
         });
 
-        // Generar enlace de Google Calendar
-        const startDateObj = new Date(`${bookingData.date}T${bookingData.time}:00`);
-        const endDateObj = new Date(startDateObj.getTime() + bookingData.duration * 60000);
+        // Generar enlace de Google Calendar con hora local de Chile.
+        const formatGCalDate = (date, time, addMinutes = 0) => {
+            const [year, month, day] = date.split('-').map(Number);
+            const [hour, minute] = time.split(':').map(Number);
+            const localDate = new Date(Date.UTC(year, month - 1, day, hour, minute + addMinutes));
+            const pad = (value) => String(value).padStart(2, '0');
 
-        const formatGCalDate = (d) => {
-            // Convierte a formato YYYYMMDDTHHMMSSZ (UTC)
-            return d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+            return [
+                localDate.getUTCFullYear(),
+                pad(localDate.getUTCMonth() + 1),
+                pad(localDate.getUTCDate())
+            ].join('') + 'T' + [
+                pad(localDate.getUTCHours()),
+                pad(localDate.getUTCMinutes()),
+                '00'
+            ].join('');
         };
 
-        const startStr = formatGCalDate(startDateObj);
-        const endStr = formatGCalDate(endDateObj);
+        const startStr = formatGCalDate(bookingData.date, bookingData.time);
+        const endStr = formatGCalDate(bookingData.date, bookingData.time, bookingData.duration);
 
         const proName = document.getElementById('header-pro-name').textContent;
         const gcalTitle = `Cita: ${bookingData.service}`;
-        const gcalDetails = `Cita agendada con ${proName} a través de FacilPyme.\\nPaciente: ${bookingData.name}\\nTeléfono: ${bookingData.phone}`;
+        const gcalDetails = `Cita agendada con ${proName} a través de FacilPyme.\nPaciente: ${bookingData.name}\nTeléfono: ${bookingData.phone}`;
 
-        gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(gcalTitle)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(gcalDetails)}`;
+        gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(gcalTitle)}&dates=${startStr}/${endStr}&ctz=America/Santiago&details=${encodeURIComponent(gcalDetails)}`;
 
         document.getElementById('success-detail').textContent =
             `Te esperamos el ${bookingData.date} a las ${bookingData.time}.`;
