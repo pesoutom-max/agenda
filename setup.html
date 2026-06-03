@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Panel general FacilPyme para administrar profesionales.">
+    <meta name="robots" content="noindex">
     <title>FacilPyme - Administrar Profesionales</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -28,7 +30,7 @@
                             placeholder="&#8226;&#8226;&#8226;&#8226;" inputmode="numeric" autocomplete="off">
                     </div>
                     <button class="btn-primary" id="btn-master-pin">Ingresar</button>
-                    <p class="pin-hint">PIN maestro por defecto: 0000</p>
+                    <p class="pin-hint">Solicita el PIN maestro al administrador.</p>
                 </div>
             </section>
 
@@ -69,6 +71,7 @@
 
                 <!-- List of Professionals -->
                 <h3 class="section-title" style="margin-top: 24px;">Profesionales Registrados</h3>
+                <button class="btn-secondary" id="btn-export-pros">Exportar Profesionales CSV</button>
                 <div id="professionals-list"></div>
 
                 <!-- Change Master PIN -->

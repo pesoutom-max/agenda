@@ -8,7 +8,8 @@ import {
     isOutsideBusinessHours, formatDateYMD, populateTimeSelect, DAY_NAMES_SHORT,
     proDoc, apptCollection, blocksCollection, apptDoc, blockDoc,
     loadProfessionalSettings, loadProfessionalProfile,
-    generateTimeSlots, DEFAULT_SLOT_INTERVAL
+    generateTimeSlots, DEFAULT_SLOT_INTERVAL, normalizePhone, normalizeRut, validateChileMobile,
+    validateRut, downloadCsv, publicBaseUrl, copyText
 } from './shared.js';
 
 // ── Read professional ID from URL ───────────────────────────
@@ -102,6 +103,9 @@ function showDashboard() {
 
 document.getElementById('btn-pin-submit')?.addEventListener('click', verifyPin);
 pinInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') verifyPin(); });
+document.getElementById('btn-copy-booking-link')?.addEventListener('click', () => {
+    copyText(`${publicBaseUrl()}index.html?pro=${encodeURIComponent(PRO_ID)}`, 'Link de reserva copiado.');
+});
 
 // ── Change PIN ─────────────────────────────────────────────
 document.getElementById('btn-change-pin')?.addEventListener('click', async () => {
@@ -111,6 +115,7 @@ document.getElementById('btn-change-pin')?.addEventListener('click', async () =>
     if (newPin.length < 4) { showToast("El PIN debe tener al menos 4 d\u00edgitos.", "error"); return; }
     if (newPin !== confirmPin) { showToast("Los PIN no coinciden.", "error"); return; }
     if (!/^\d+$/.test(newPin)) { showToast("El PIN debe contener solo n\u00fameros.", "error"); return; }
+    if (newPin === '0000') { showToast("Usa un PIN distinto de 0000.", "error"); return; }
 
     try {
         await updateDoc(proDoc(db, PRO_ID), { pin: newPin });
@@ -314,7 +319,8 @@ function renderAppointments() {
         const appDateObj = new Date(app.date + 'T00:00:00');
         const dayName = DAY_NAMES_SHORT[appDateObj.getDay()];
         const waMsg = encodeURIComponent(`Hola ${app.patientName}, te recordamos tu hora del ${dayName} ${app.date} a las ${app.time}. ¡Te esperamos!`);
-        const waUrl = `https://wa.me/56${app.patientPhone}?text=${waMsg}`;
+        const phone = normalizePhone(app.patientPhone);
+        const waUrl = `https://wa.me/56${phone}?text=${waMsg}`;
 
         card.innerHTML = `
             <div class="appointment-row">
@@ -327,7 +333,7 @@ function renderAppointments() {
                 </div>
                 <div class="appointment-actions appointment-actions--vertical">
                     <button class="btn-edit-outline" data-id="${app.id}">Editar</button>
-                    ${app.patientPhone ? `<a href="${waUrl}" target="_blank" class="btn-whatsapp" style="text-align:center;">WA</a>` : ''}
+                    ${phone ? `<a href="${waUrl}" target="_blank" class="btn-whatsapp" style="text-align:center;">WA</a>` : ''}
                     <button class="btn-cancel-outline" data-id="${app.id}">Cancelar</button>
                 </div>
             </div>
@@ -421,9 +427,9 @@ document.getElementById('btn-modal-cancel')?.addEventListener('click', () => {
 document.getElementById('btn-modal-save')?.addEventListener('click', async () => {
     const id = document.getElementById('edit-id').value;
     const updates = {
-        patientName: document.getElementById('edit-name').value,
-        patientPhone: document.getElementById('edit-phone').value,
-        patientRut: document.getElementById('edit-rut').value,
+        patientName: document.getElementById('edit-name').value.trim(),
+        patientPhone: normalizePhone(document.getElementById('edit-phone').value),
+        patientRut: normalizeRut(document.getElementById('edit-rut').value),
         notes: document.getElementById('edit-notes').value,
         time: editTimeSelect.value
     };
@@ -431,6 +437,18 @@ document.getElementById('btn-modal-save')?.addEventListener('click', async () =>
     btn.disabled = true;
     btn.innerText = 'Guardando...';
     try {
+        if (!updates.patientName) {
+            showToast("El nombre del paciente no puede estar vac\u00edo.", "error");
+            return;
+        }
+        if (updates.patientPhone && !validateChileMobile(updates.patientPhone)) {
+            showToast("El celular debe tener 9 d\u00edgitos y comenzar con 9.", "error");
+            return;
+        }
+        if (updates.patientRut && !validateRut(updates.patientRut)) {
+            showToast("El RUT no es v\u00e1lido.", "error");
+            return;
+        }
         await updateDoc(apptDoc(db, PRO_ID, id), updates);
         editModal.style.display = 'none';
         showToast("Cita actualizada.", "success");
@@ -454,12 +472,15 @@ async function cancelApp(id) {
     if (!confirm("\u00bfCancelar esta cita?")) return;
     try {
         const app = currentData.appointments.find(a => a.id === id);
-        await deleteDoc(apptDoc(db, PRO_ID, id));
+        await updateDoc(apptDoc(db, PRO_ID, id), {
+            status: STATUS.CANCELLED,
+            cancelledAt: new Date()
+        });
         showToast("Cita cancelada.", "success");
 
         if (app && app.patientPhone && confirm("\u00bfEnviar aviso por WhatsApp?")) {
             const msg = `Hola ${app.patientName}, tu cita del ${app.date} a las ${app.time} fue cancelada. Cont\u00e1ctanos para reagendar.`;
-            window.open(`https://wa.me/56${app.patientPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+            window.open(`https://wa.me/56${normalizePhone(app.patientPhone)}?text=${encodeURIComponent(msg)}`, '_blank');
         }
     } catch (e) {
         showToast("Error al cancelar.", "error");
@@ -493,6 +514,37 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         if (tab === 'reports') loadReportsUI();
         if (tab === 'settings') loadSettingsUI();
     });
+});
+
+document.getElementById('btn-export-month')?.addEventListener('click', async () => {
+    try {
+        const month = document.getElementById('stat-month-select').value;
+        const year = document.getElementById('stat-year-select').value;
+        const monthPrefix = `${year}-${month}`;
+        const qApp = query(apptCollection(db, PRO_ID), where("status", "==", STATUS.CONFIRMED));
+        const snapshot = await getDocs(qApp);
+        const rows = [['Fecha', 'Hora', 'Paciente', 'Telefono', 'Email', 'RUT', 'Servicio', 'Notas']];
+
+        snapshot.forEach(docSnap => {
+            const app = docSnap.data();
+            if (!app.date?.startsWith(monthPrefix)) return;
+            rows.push([
+                app.date,
+                app.time,
+                app.patientName,
+                app.patientPhone,
+                app.patientEmail,
+                app.patientRut,
+                app.serviceName,
+                app.notes
+            ]);
+        });
+
+        downloadCsv(`citas-${PRO_ID}-${monthPrefix}.csv`, rows);
+    } catch (e) {
+        console.error("Error exporting appointments:", e);
+        showToast("No se pudo exportar el mes.", "error");
+    }
 });
 
 // ── Reports & Search ─────────────────────────────────────────
@@ -605,7 +657,7 @@ document.getElementById('btn-patient-search')?.addEventListener('click', async (
             d.id = docSnap.id;
             const rutStr = (d.patientRut || '').toLowerCase();
             const nameStr = (d.patientName || '').toLowerCase();
-            const phoneStr = (d.patientPhone || '').toLowerCase();
+            const phoneStr = normalizePhone(d.patientPhone);
 
             if (nameStr.includes(term) || rutStr.includes(term) || phoneStr.includes(term)) {
                 matched.push(d);
@@ -638,7 +690,7 @@ document.getElementById('btn-patient-search')?.addEventListener('click', async (
                 <div class="appointment-details">
                     <div>Servicio: ${sanitize(app.serviceName)}</div>
                     ${app.patientRut ? `<div>RUT: ${sanitize(app.patientRut)}</div>` : ''}
-                    <div>Phone: <a href="https://wa.me/56${sanitize(app.patientPhone)}" target="_blank" class="txt-link">${sanitize(app.patientPhone)}</a></div>
+                    <div>Tel: <a href="https://wa.me/56${sanitize(normalizePhone(app.patientPhone))}" target="_blank" class="txt-link">${sanitize(normalizePhone(app.patientPhone))}</a></div>
                     ${app.notes ? `<div class="appointment-notes"><strong>Notas:</strong> ${sanitize(app.notes)}</div>` : ''}
                     <div style="margin-top: 10px;">
                         <button class="btn-edit-outline" data-id="${app.id}" style="width: 100%;">Editar Info. / Notas</button>
@@ -758,6 +810,7 @@ document.getElementById('btn-add-service')?.addEventListener('click', async () =
 
     if (!name) { showToast("Ingresa el nombre del servicio.", "error"); return; }
     if (!duration || duration < 5) { showToast("La duraci\u00f3n debe ser al menos 5 minutos.", "error"); return; }
+    if (duration > 480) { showToast("La duraci\u00f3n no puede superar 480 minutos.", "error"); return; }
 
     const btn = document.getElementById('btn-add-service');
     btn.disabled = true;
@@ -855,7 +908,7 @@ async function loadReminders() {
                             <div class="reminder-title">${sanitize(app.time)} - ${sanitize(app.patientName)}</div>
                             <div class="reminder-detail">${sanitize(app.serviceName)}</div>
                         </div>
-                        <a href="https://wa.me/56${sanitize(app.patientPhone)}?text=${encodeURIComponent(msg)}" target="_blank" class="btn-whatsapp">WA</a>
+                        <a href="https://wa.me/56${sanitize(normalizePhone(app.patientPhone))}?text=${encodeURIComponent(msg)}" target="_blank" class="btn-whatsapp">WA</a>
                     </div>
                 `;
                 remindersList.appendChild(card);

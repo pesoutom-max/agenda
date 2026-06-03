@@ -2,7 +2,10 @@ import { db } from './firebase-init.js';
 import {
     collection, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, query, writeBatch, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { sanitize, showToast } from './shared.js';
+import {
+    sanitize, showToast, normalizePhone, validateChileMobile, validateEmail,
+    normalizeSlug, copyText, publicBaseUrl, downloadCsv
+} from './shared.js';
 
 // ── Constants ───────────────────────────────────────────────
 const MASTER_PIN_KEY = 'facilpyme_master_auth';
@@ -83,19 +86,20 @@ async function loadProfessionals() {
         pros.forEach(pro => {
             const card = document.createElement('div');
             card.className = 'pro-card';
-            const bookingUrl = `${window.location.origin}${window.location.pathname.replace('setup.html', '')}index.html?pro=${pro.id}`;
-            const adminUrl = `${window.location.origin}${window.location.pathname.replace('setup.html', '')}admin.html?pro=${pro.id}`;
+            const bookingUrl = `${publicBaseUrl()}index.html?pro=${encodeURIComponent(pro.id)}`;
+            const adminUrl = `${publicBaseUrl()}admin.html?pro=${encodeURIComponent(pro.id)}`;
 
             card.innerHTML = `
                 <div class="pro-list-row">
                     <div class="pro-list-info">
                         <div class="pro-list-name">${sanitize(pro.name)}</div>
                         <div class="pro-list-slug">ID: ${sanitize(pro.id)}</div>
-                        ${pro.phone ? `<div class="pro-list-detail">📞 ${sanitize(pro.phone)}</div>` : ''}
-                        ${pro.email ? `<div class="pro-list-detail">✉️ ${sanitize(pro.email)}</div>` : ''}
+                        ${pro.phone ? `<div class="pro-list-detail">Tel: ${sanitize(pro.phone)}</div>` : ''}
+                        ${pro.email ? `<div class="pro-list-detail">Email: ${sanitize(pro.email)}</div>` : ''}
                         <div class="pro-list-links">
                             <a href="${bookingUrl}" target="_blank" class="pro-link">Reserva</a>
                             <a href="${adminUrl}" target="_blank" class="pro-link pro-link--admin">Admin</a>
+                            <button type="button" class="pro-link pro-link-button btn-copy-link" data-url="${bookingUrl}">Copiar reserva</button>
                         </div>
                     </div>
                     <div class="pro-list-actions">
@@ -115,12 +119,14 @@ async function loadProfessionals() {
 // ── Create professional ─────────────────────────────────────
 document.getElementById('btn-create-pro')?.addEventListener('click', async () => {
     const name = document.getElementById('pro-name').value.trim();
-    const phone = document.getElementById('pro-phone').value.trim();
+    const phone = normalizePhone(document.getElementById('pro-phone').value);
     const email = document.getElementById('pro-email').value.trim();
-    const slug = document.getElementById('pro-slug').value.trim().toLowerCase();
+    const slug = normalizeSlug(document.getElementById('pro-slug').value);
     const pin = document.getElementById('pro-pin').value.trim();
 
     if (!name) { showToast("Ingresa el nombre del profesional.", "error"); return; }
+    if (phone && !validateChileMobile(phone)) { showToast("Ingresa un celular chileno v\u00e1lido.", "error"); return; }
+    if (!validateEmail(email)) { showToast("Ingresa un correo v\u00e1lido.", "error"); return; }
     if (!slug || !/^[a-z0-9\-]+$/.test(slug)) {
         showToast("El identificador solo puede contener letras min\u00fasculas, n\u00fameros y guiones.", "error");
         return;
@@ -130,6 +136,7 @@ document.getElementById('btn-create-pro')?.addEventListener('click', async () =>
         showToast("El PIN debe tener 4-6 d\u00edgitos num\u00e9ricos.", "error");
         return;
     }
+    if (pin === '0000') { showToast("Usa un PIN distinto de 0000.", "error"); return; }
 
     const btn = document.getElementById('btn-create-pro');
     btn.disabled = true;
@@ -191,6 +198,12 @@ document.getElementById('pro-slug')?.addEventListener('input', () => {
 const editModal = document.getElementById('edit-modal');
 
 proList.addEventListener('click', (e) => {
+    const copyBtn = e.target.closest('.btn-copy-link');
+    if (copyBtn) {
+        copyText(copyBtn.dataset.url, 'Link de reserva copiado.');
+        return;
+    }
+
     // Edit button
     const editBtn = e.target.closest('.btn-edit-pro');
     if (editBtn) {
@@ -219,15 +232,18 @@ document.getElementById('btn-edit-cancel')?.addEventListener('click', () => {
 document.getElementById('btn-edit-save')?.addEventListener('click', async () => {
     const proId = document.getElementById('edit-pro-id').value;
     const name = document.getElementById('edit-pro-name').value.trim();
-    const phone = document.getElementById('edit-pro-phone').value.trim();
+    const phone = normalizePhone(document.getElementById('edit-pro-phone').value);
     const email = document.getElementById('edit-pro-email').value.trim();
     const pin = document.getElementById('edit-pro-pin').value.trim();
 
     if (!name) { showToast("El nombre no puede estar vacío.", "error"); return; }
+    if (phone && !validateChileMobile(phone)) { showToast("Ingresa un celular chileno v\u00e1lido.", "error"); return; }
+    if (!validateEmail(email)) { showToast("Ingresa un correo v\u00e1lido.", "error"); return; }
     if (pin && (pin.length < 4 || !/^\d+$/.test(pin))) {
         showToast("El PIN debe tener 4-6 dígitos numéricos.", "error");
         return;
     }
+    if (pin === '0000') { showToast("Usa un PIN distinto de 0000.", "error"); return; }
 
     const btn = document.getElementById('btn-edit-save');
     btn.disabled = true;
@@ -294,6 +310,7 @@ document.getElementById('btn-change-master-pin')?.addEventListener('click', asyn
     if (newPin.length < 4) { showToast("El PIN debe tener al menos 4 d\u00edgitos.", "error"); return; }
     if (newPin !== confirmPin) { showToast("Los PIN no coinciden.", "error"); return; }
     if (!/^\d+$/.test(newPin)) { showToast("El PIN debe contener solo n\u00fameros.", "error"); return; }
+    if (newPin === '0000') { showToast("Usa un PIN distinto de 0000.", "error"); return; }
 
     try {
         await setDoc(doc(db, "config", "master"), { pin: newPin, updatedAt: new Date() });
@@ -312,4 +329,28 @@ document.getElementById('btn-setup-logout')?.addEventListener('click', () => {
     pinScreen.style.display = 'block';
     pinInput.value = '';
     pinInput.focus();
+});
+
+document.getElementById('btn-export-pros')?.addEventListener('click', async () => {
+    try {
+        const snap = await getDocs(collection(db, "professionals"));
+        const rows = [['ID', 'Nombre', 'Telefono', 'Email', 'Link Reserva', 'Link Admin']];
+        snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+            .forEach(pro => {
+                rows.push([
+                    pro.id,
+                    pro.name,
+                    pro.phone,
+                    pro.email,
+                    `${publicBaseUrl()}index.html?pro=${pro.id}`,
+                    `${publicBaseUrl()}admin.html?pro=${pro.id}`
+                ]);
+            });
+        downloadCsv('profesionales-facilpyme.csv', rows);
+    } catch (e) {
+        console.error("Error exporting professionals:", e);
+        showToast("No se pudo exportar profesionales.", "error");
+    }
 });

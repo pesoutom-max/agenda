@@ -92,6 +92,62 @@ export function sanitize(str) {
     return div.innerHTML;
 }
 
+// ── Input normalization ───────────────────────────────────
+export function normalizePhone(phone) {
+    return String(phone || '').replace(/[^0-9]/g, '').replace(/^56/, '').slice(-9);
+}
+
+export function validateChileMobile(phone) {
+    return /^9\d{8}$/.test(normalizePhone(phone));
+}
+
+export function normalizeRut(rut) {
+    return String(rut || '').replace(/[.\s]/g, '').toUpperCase();
+}
+
+export function normalizeSlug(slug) {
+    return String(slug || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+export function appointmentId(date, time) {
+    return `${date}_${String(time || '').replace(':', '')}`;
+}
+
+export function randomToken() {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function publicBaseUrl() {
+    const path = window.location.pathname;
+    return `${window.location.origin}${path.slice(0, path.lastIndexOf('/') + 1)}`;
+}
+
+export async function copyText(text, successMessage = 'Copiado al portapapeles.') {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        showToast(successMessage, 'success');
+        return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+    showToast(successMessage, 'success');
+}
+
 // ── Date helpers ───────────────────────────────────────────
 export function formatDateYMD(date) {
     return date.getFullYear() + '-' +
@@ -156,6 +212,20 @@ export function validateRut(rut) {
 export function validateEmail(email) {
     if (!email) return true; // optional field
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export function downloadCsv(filename, rows) {
+    const csv = rows.map(row => row.map(value => {
+        const text = String(value ?? '');
+        return `"${text.replace(/"/g, '""')}"`;
+    }).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 // ── Calendar component (unified) ───────────────────────────

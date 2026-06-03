@@ -1231,6 +1231,12 @@ body {
     background: var(--primary-soft);
 }
 
+.pro-link-button {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
 .pro-link--admin {
     color: var(--text-main);
     background: var(--bg-main);

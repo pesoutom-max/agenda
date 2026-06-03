@@ -1,12 +1,13 @@
 import { db } from './firebase-init.js';
 import {
-    addDoc, getDocs, query, where, serverTimestamp
+    getDoc, getDocs, query, runTransaction, serverTimestamp, updateDoc, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
-    STATUS, sanitize, showToast, validateRut, validateEmail,
+    STATUS, sanitize, showToast, validateRut, validateEmail, normalizePhone, normalizeRut,
     renderCalendar, isOutsideBusinessHours, formatDateYMD,
     apptCollection, blocksCollection, loadProfessionalSettings, loadProfessionalProfile,
-    generateTimeSlots, DEFAULT_SLOT_INTERVAL
+    generateTimeSlots, DEFAULT_SLOT_INTERVAL, appointmentId, randomToken, apptDoc, publicBaseUrl,
+    validateChileMobile, copyText
 } from './shared.js';
 
 // ── Read professional ID from URL ───────────────────────────
@@ -20,6 +21,8 @@ let timeSlots = generateTimeSlots(DEFAULT_SLOT_INTERVAL);
 let currentMonth = new Date();
 let gcalUrl = '';
 let proPhone = '';
+let cancelTarget = null;
+let cancelUrl = '';
 
 // ── DOM references ─────────────────────────────────────────
 const calendarRoot = document.getElementById('calendar-root');
@@ -81,8 +84,8 @@ async function init() {
 
     renderPatientCalendar();
 
-    if (window.location.hash === '#cancel') {
-        goTo('screen-cancel');
+    if (params.get('cancel') && params.get('token')) {
+        await loadCancellation(params.get('cancel'), params.get('token'));
     } else {
         goTo('screen-start');
     }
@@ -142,6 +145,9 @@ document.getElementById('btn-save-rut')?.addEventListener('click', saveRutAndFin
 document.getElementById('btn-add-gcal')?.addEventListener('click', () => {
     if (gcalUrl) window.open(gcalUrl, '_blank');
 });
+document.getElementById('btn-copy-cancel-link')?.addEventListener('click', () => {
+    if (cancelUrl) copyText(cancelUrl, 'Link de cancelaci\u00f3n copiado.');
+});
 document.getElementById('btn-cancel-confirm')?.addEventListener('click', confirmCancellation);
 document.getElementById('btn-cancel-keep')?.addEventListener('click', () => goTo('screen-start'));
 document.getElementById('btn-new-appointment')?.addEventListener('click', () => location.reload());
@@ -150,13 +156,13 @@ document.querySelectorAll('.btn-reload').forEach(btn => btn.addEventListener('cl
 // ── Phone input: only digits ───────────────────────────────
 const phoneInput = document.getElementById('patient-phone');
 phoneInput?.addEventListener('input', () => {
-    phoneInput.value = phoneInput.value.replace(/[^0-9]/g, '');
+    phoneInput.value = normalizePhone(phoneInput.value);
 });
 
 // ── RUT input: uppercase ───────────────────────────────────
 const rutInput = document.getElementById('patient-rut');
 rutInput?.addEventListener('input', () => {
-    rutInput.value = rutInput.value.toUpperCase();
+    rutInput.value = normalizeRut(rutInput.value);
 });
 
 // ── Calendar rendering ─────────────────────────────────────
@@ -249,15 +255,15 @@ function selectTime(time, el) {
 async function confirmBooking() {
     const name = document.getElementById('patient-name').value.trim();
     bookingData.date = datePicker.value;
-    const phone = document.getElementById('patient-phone').value.trim();
+    const phone = normalizePhone(document.getElementById('patient-phone').value);
     const email = document.getElementById('patient-email').value.trim();
 
     if (!name) {
         showToast("Por favor, ingresa tu nombre.", "error");
         return;
     }
-    if (phone.length !== 9) {
-        showToast("Ingresa un n\u00famero de tel\u00e9fono v\u00e1lido de 9 d\u00edgitos.", "error");
+    if (!validateChileMobile(phone)) {
+        showToast("Ingresa un celular chileno v\u00e1lido de 9 d\u00edgitos, comenzando con 9.", "error");
         return;
     }
     if (!validateEmail(email)) {
@@ -283,7 +289,7 @@ async function confirmBooking() {
 
 // ── Save RUT and finish booking ────────────────────────────
 async function saveRutAndFinish() {
-    const rut = document.getElementById('patient-rut').value.trim();
+    const rut = normalizeRut(document.getElementById('patient-rut').value);
     const btn = document.getElementById('btn-save-rut');
 
     if (rut && !validateRut(rut)) {
@@ -295,6 +301,12 @@ async function saveRutAndFinish() {
     btn.innerText = 'Guardando...';
 
     try {
+        if (!bookingData.service || !bookingData.date || !bookingData.time) {
+            showToast("Faltan datos de la reserva. Por favor vuelve a elegir la hora.", "error");
+            goTo('screen-services');
+            return;
+        }
+
         const checkQuery = query(
             apptCollection(db, PRO_ID),
             where("date", "==", bookingData.date),
@@ -311,17 +323,30 @@ async function saveRutAndFinish() {
             return;
         }
 
-        await addDoc(apptCollection(db, PRO_ID), {
-            serviceName: bookingData.service,
-            date: bookingData.date,
-            time: bookingData.time,
-            patientName: bookingData.name,
-            patientPhone: bookingData.phone,
-            patientEmail: bookingData.email,
-            patientRut: rut,
-            notes: '',
-            status: STATUS.CONFIRMED,
-            createdAt: serverTimestamp()
+        const id = appointmentId(bookingData.date, bookingData.time);
+        const token = randomToken();
+        const appointmentRef = apptDoc(db, PRO_ID, id);
+        cancelUrl = `${publicBaseUrl()}index.html?pro=${encodeURIComponent(PRO_ID)}&cancel=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`;
+
+        await runTransaction(db, async (transaction) => {
+            const existingById = await transaction.get(appointmentRef);
+            if (existingById.exists() && existingById.data().status === STATUS.CONFIRMED) {
+                throw new Error('slot-taken');
+            }
+
+            transaction.set(appointmentRef, {
+                serviceName: bookingData.service,
+                date: bookingData.date,
+                time: bookingData.time,
+                patientName: bookingData.name,
+                patientPhone: bookingData.phone,
+                patientEmail: bookingData.email,
+                patientRut: rut,
+                notes: '',
+                status: STATUS.CONFIRMED,
+                cancelToken: token,
+                createdAt: serverTimestamp()
+            });
         });
 
         // Generar enlace de Google Calendar
@@ -338,7 +363,7 @@ async function saveRutAndFinish() {
 
         const proName = document.getElementById('header-pro-name').textContent;
         const gcalTitle = `Cita: ${bookingData.service}`;
-        const gcalDetails = `Cita agendada con ${proName} a través de FacilPyme.\\nPaciente: ${bookingData.name}\\nTeléfono: ${bookingData.phone}`;
+        const gcalDetails = `Cita agendada con ${proName} a través de FacilPyme.\\nPaciente: ${bookingData.name}\\nTeléfono: ${bookingData.phone}\\nCancelar o revisar: ${cancelUrl}`;
 
         gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(gcalTitle)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(gcalDetails)}`;
 
@@ -348,19 +373,82 @@ async function saveRutAndFinish() {
 
     } catch (e) {
         console.error("Error finishing booking:", e);
-        showToast("Hubo un error al guardar la reserva. Int\u00e9ntalo de nuevo.", "error");
+        if (e.message === 'slot-taken') {
+            showToast("Este horario acaba de ser reservado por otro paciente. Por favor elige otro.", "error");
+            goTo('screen-time');
+            checkAvailability();
+        } else {
+            showToast("Hubo un error al guardar la reserva. Int\u00e9ntalo de nuevo.", "error");
+        }
         btn.disabled = false;
         btn.innerText = 'Confirmar y Agendar';
+    } finally {
+        if (document.getElementById('screen-rut')?.style.display !== 'none') {
+            btn.disabled = false;
+            btn.innerText = 'Confirmar y Agendar';
+        }
     }
 }
 
 // ── Cancellation ───────────────────────────────────────────
-function confirmCancellation() {
+async function loadCancellation(id, token) {
+    try {
+        const snap = await getDoc(apptDoc(db, PRO_ID, id));
+        if (!snap.exists() || snap.data().cancelToken !== token || snap.data().status !== STATUS.CONFIRMED) {
+            showToast("El enlace de cancelaci\u00f3n no es v\u00e1lido o la cita ya fue cancelada.", "error");
+            goTo('screen-error');
+            return;
+        }
+
+        const app = snap.data();
+        cancelTarget = { id, token, ...app };
+        document.getElementById('cancel-service').textContent = app.serviceName || 'Cita';
+        document.getElementById('cancel-datetime').textContent = `${app.date} a las ${app.time}`;
+        bookingData.name = app.patientName || '';
+        bookingData.date = app.date || '';
+        bookingData.time = app.time || '';
+        goTo('screen-cancel');
+    } catch (e) {
+        console.error("Error loading cancellation:", e);
+        showToast("No se pudo cargar la cita para cancelar.", "error");
+        goTo('screen-error');
+    }
+}
+
+async function confirmCancellation() {
+    if (!cancelTarget) {
+        goTo('screen-start');
+        return;
+    }
+
     const nameEl = document.querySelector('.wa-name-c');
     const datetimeEl = document.querySelector('.wa-datetime-c');
-    if (nameEl) nameEl.textContent = bookingData.name || "Paciente";
-    if (datetimeEl) datetimeEl.textContent = `${bookingData.date} a las ${bookingData.time}`;
-    goTo('screen-cancel-success');
+    const btn = document.getElementById('btn-cancel-confirm');
+    btn.disabled = true;
+    btn.innerText = 'Cancelando...';
+
+    try {
+        const ref = apptDoc(db, PRO_ID, cancelTarget.id);
+        const snap = await getDoc(ref);
+        if (!snap.exists() || snap.data().cancelToken !== cancelTarget.token) {
+            throw new Error('invalid-cancel-token');
+        }
+
+        await updateDoc(ref, {
+            status: STATUS.CANCELLED,
+            cancelledAt: serverTimestamp()
+        });
+
+        if (nameEl) nameEl.textContent = cancelTarget.patientName || "Paciente";
+        if (datetimeEl) datetimeEl.textContent = `${cancelTarget.date} a las ${cancelTarget.time}`;
+        goTo('screen-cancel-success');
+    } catch (e) {
+        console.error("Error cancelling appointment:", e);
+        showToast("No se pudo cancelar la cita. Int\u00e9ntalo nuevamente.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Confirmar Cancelaci\u00f3n';
+    }
 }
 
 // ── Start ──────────────────────────────────────────────────
