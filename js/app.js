@@ -1,13 +1,12 @@
 import { db } from './firebase-init.js';
 import {
-    getDoc, getDocs, query, runTransaction, serverTimestamp, updateDoc, where
+    getDocs, query, runTransaction, serverTimestamp, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     STATUS, sanitize, showToast, validateRut, validateEmail, normalizePhone, normalizeRut,
     renderCalendar, isOutsideBusinessHours, formatDateYMD,
     apptCollection, blocksCollection, loadProfessionalSettings, loadProfessionalProfile,
-    generateTimeSlots, DEFAULT_SLOT_INTERVAL, appointmentId, randomToken, apptDoc, publicBaseUrl,
-    validateChileMobile, copyText
+    generateTimeSlots, DEFAULT_SLOT_INTERVAL, appointmentId, apptDoc, validateChileMobile
 } from './shared.js';
 
 // ── Read professional ID from URL ───────────────────────────
@@ -21,8 +20,6 @@ let timeSlots = generateTimeSlots(DEFAULT_SLOT_INTERVAL);
 let currentMonth = new Date();
 let gcalUrl = '';
 let proPhone = '';
-let cancelTarget = null;
-let cancelUrl = '';
 
 // ── DOM references ─────────────────────────────────────────
 const calendarRoot = document.getElementById('calendar-root');
@@ -84,11 +81,7 @@ async function init() {
 
     renderPatientCalendar();
 
-    if (params.get('cancel') && params.get('token')) {
-        await loadCancellation(params.get('cancel'), params.get('token'));
-    } else {
-        goTo('screen-start');
-    }
+    goTo('screen-start');
 }
 
 // ── Render services from professional config ───────────────
@@ -145,11 +138,6 @@ document.getElementById('btn-save-rut')?.addEventListener('click', saveRutAndFin
 document.getElementById('btn-add-gcal')?.addEventListener('click', () => {
     if (gcalUrl) window.open(gcalUrl, '_blank');
 });
-document.getElementById('btn-copy-cancel-link')?.addEventListener('click', () => {
-    if (cancelUrl) copyText(cancelUrl, 'Link de cancelaci\u00f3n copiado.');
-});
-document.getElementById('btn-cancel-confirm')?.addEventListener('click', confirmCancellation);
-document.getElementById('btn-cancel-keep')?.addEventListener('click', () => goTo('screen-start'));
 document.getElementById('btn-new-appointment')?.addEventListener('click', () => location.reload());
 document.querySelectorAll('.btn-reload').forEach(btn => btn.addEventListener('click', () => location.reload()));
 
@@ -324,9 +312,7 @@ async function saveRutAndFinish() {
         }
 
         const id = appointmentId(bookingData.date, bookingData.time);
-        const token = randomToken();
         const appointmentRef = apptDoc(db, PRO_ID, id);
-        cancelUrl = `${publicBaseUrl()}index.html?pro=${encodeURIComponent(PRO_ID)}&cancel=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`;
 
         await runTransaction(db, async (transaction) => {
             const existingById = await transaction.get(appointmentRef);
@@ -344,7 +330,6 @@ async function saveRutAndFinish() {
                 patientRut: rut,
                 notes: '',
                 status: STATUS.CONFIRMED,
-                cancelToken: token,
                 createdAt: serverTimestamp()
             });
         });
@@ -363,7 +348,7 @@ async function saveRutAndFinish() {
 
         const proName = document.getElementById('header-pro-name').textContent;
         const gcalTitle = `Cita: ${bookingData.service}`;
-        const gcalDetails = `Cita agendada con ${proName} a través de FacilPyme.\\nPaciente: ${bookingData.name}\\nTeléfono: ${bookingData.phone}\\nCancelar o revisar: ${cancelUrl}`;
+        const gcalDetails = `Cita agendada con ${proName} a través de FacilPyme.\\nPaciente: ${bookingData.name}\\nTeléfono: ${bookingData.phone}`;
 
         gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(gcalTitle)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(gcalDetails)}`;
 
@@ -387,67 +372,6 @@ async function saveRutAndFinish() {
             btn.disabled = false;
             btn.innerText = 'Confirmar y Agendar';
         }
-    }
-}
-
-// ── Cancellation ───────────────────────────────────────────
-async function loadCancellation(id, token) {
-    try {
-        const snap = await getDoc(apptDoc(db, PRO_ID, id));
-        if (!snap.exists() || snap.data().cancelToken !== token || snap.data().status !== STATUS.CONFIRMED) {
-            showToast("El enlace de cancelaci\u00f3n no es v\u00e1lido o la cita ya fue cancelada.", "error");
-            goTo('screen-error');
-            return;
-        }
-
-        const app = snap.data();
-        cancelTarget = { id, token, ...app };
-        document.getElementById('cancel-service').textContent = app.serviceName || 'Cita';
-        document.getElementById('cancel-datetime').textContent = `${app.date} a las ${app.time}`;
-        bookingData.name = app.patientName || '';
-        bookingData.date = app.date || '';
-        bookingData.time = app.time || '';
-        goTo('screen-cancel');
-    } catch (e) {
-        console.error("Error loading cancellation:", e);
-        showToast("No se pudo cargar la cita para cancelar.", "error");
-        goTo('screen-error');
-    }
-}
-
-async function confirmCancellation() {
-    if (!cancelTarget) {
-        goTo('screen-start');
-        return;
-    }
-
-    const nameEl = document.querySelector('.wa-name-c');
-    const datetimeEl = document.querySelector('.wa-datetime-c');
-    const btn = document.getElementById('btn-cancel-confirm');
-    btn.disabled = true;
-    btn.innerText = 'Cancelando...';
-
-    try {
-        const ref = apptDoc(db, PRO_ID, cancelTarget.id);
-        const snap = await getDoc(ref);
-        if (!snap.exists() || snap.data().cancelToken !== cancelTarget.token) {
-            throw new Error('invalid-cancel-token');
-        }
-
-        await updateDoc(ref, {
-            status: STATUS.CANCELLED,
-            cancelledAt: serverTimestamp()
-        });
-
-        if (nameEl) nameEl.textContent = cancelTarget.patientName || "Paciente";
-        if (datetimeEl) datetimeEl.textContent = `${cancelTarget.date} a las ${cancelTarget.time}`;
-        goTo('screen-cancel-success');
-    } catch (e) {
-        console.error("Error cancelling appointment:", e);
-        showToast("No se pudo cancelar la cita. Int\u00e9ntalo nuevamente.", "error");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = 'Confirmar Cancelaci\u00f3n';
     }
 }
 

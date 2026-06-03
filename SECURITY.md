@@ -6,10 +6,10 @@ Esta app es un frontend estático que lee y escribe en Firestore desde el navega
 
 - Los links de administración y reserva se mantienen iguales.
 - Las reservas nuevas usan un ID determinístico por fecha y hora para reducir dobles reservas.
-- Las reservas nuevas guardan `cancelToken` para permitir cancelación con enlace único.
 - Los teléfonos se normalizan a celular chileno de 9 dígitos.
 - El PIN `0000` ya no se acepta como nuevo PIN de profesional ni como nuevo PIN maestro.
 - El panel setup ya no muestra el PIN por defecto en pantalla.
+- Los pacientes solo pueden reservar. Los cambios y anulaciones se realizan desde el panel profesional.
 
 ## Recomendación para reglas Firestore
 
@@ -20,7 +20,7 @@ Un endurecimiento compatible inicial debería:
 - Permitir lectura pública solo de datos profesionales necesarios para reservar: nombre, servicios, settings.
 - Permitir creación de citas solo con campos esperados, `status == "confirmed"`, teléfono válido y fecha/hora con formato válido.
 - Impedir update/delete público de profesionales, configuración, PIN y bloques.
-- Permitir cancelación pública solo si se mantiene el mismo documento y se cambia `status` a `"cancelled"` con un `cancelToken` válido. Esta validación es limitada sin backend porque las reglas no deben exponer el token.
+- Impedir update/delete público de citas desde la vista paciente. Las anulaciones y cambios deben pasar por el panel profesional o un backend validado.
 - Mover administración real a Firebase Auth o Cloud Functions en una fase siguiente.
 
 ## Siguiente paso recomendado
