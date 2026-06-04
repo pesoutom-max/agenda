@@ -42,7 +42,8 @@ export function blockDoc(db, proId, blockId) {
 // ── Generate time slots dynamically ─────────────────────────
 export function generateTimeSlots(interval = DEFAULT_SLOT_INTERVAL) {
     const slots = [];
-    for (let mins = 360; mins < 1320; mins += interval) { // 06:00 to 21:59
+    const step = Number(interval) > 0 ? Number(interval) : 5;
+    for (let mins = 360; mins < 1320; mins += step) { // 06:00 to 21:59
         const h = String(Math.floor(mins / 60)).padStart(2, '0');
         const m = String(mins % 60).padStart(2, '0');
         slots.push(`${h}:${m}`);
@@ -62,7 +63,7 @@ export async function loadProfessionalSettings(db, proId) {
                 endTime: s.endTime || "",
                 lunchStart: s.lunchStart || "",
                 lunchEnd: s.lunchEnd || "",
-                slotInterval: s.slotInterval || DEFAULT_SLOT_INTERVAL
+                slotInterval: Number.isFinite(Number(s.slotInterval)) ? Number(s.slotInterval) : DEFAULT_SLOT_INTERVAL
             };
         }
     } catch (e) {

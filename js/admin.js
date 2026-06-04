@@ -708,7 +708,8 @@ document.getElementById('btn-patient-search')?.addEventListener('click', async (
 
 // ── Settings ───────────────────────────────────────────────
 function fillSettingsSelects() {
-    const interval = parseInt(document.getElementById('set-interval').value) || DEFAULT_SLOT_INTERVAL;
+    const intervalValue = Number(document.getElementById('set-interval').value);
+    const interval = Number.isFinite(intervalValue) ? intervalValue : DEFAULT_SLOT_INTERVAL;
     const slots = generateTimeSlots(interval);
     ['set-start', 'set-end', 'set-lunch-start', 'set-lunch-end'].forEach(id => {
         const s = document.getElementById(id);
@@ -729,7 +730,9 @@ document.getElementById('set-interval')?.addEventListener('change', fillSettings
 
 async function loadSettingsUI() {
     configData = await loadProfessionalSettings(db, PRO_ID);
-    document.getElementById('set-interval').value = configData.slotInterval || DEFAULT_SLOT_INTERVAL;
+    document.getElementById('set-interval').value = Number.isFinite(Number(configData.slotInterval))
+        ? String(configData.slotInterval)
+        : String(DEFAULT_SLOT_INTERVAL);
     fillSettingsSelects();
     document.getElementById('set-start').value = configData.startTime || "";
     document.getElementById('set-end').value = configData.endTime || "";
@@ -747,7 +750,8 @@ document.getElementById('btn-save-settings')?.addEventListener('click', async ()
     btn.disabled = true;
     btn.innerText = 'Guardando...';
     try {
-        const newInterval = parseInt(document.getElementById('set-interval').value) || DEFAULT_SLOT_INTERVAL;
+        const intervalValue = Number(document.getElementById('set-interval').value);
+        const newInterval = Number.isFinite(intervalValue) ? intervalValue : DEFAULT_SLOT_INTERVAL;
         const newSettings = {
             startTime: document.getElementById('set-start').value,
             endTime: document.getElementById('set-end').value,
@@ -769,6 +773,29 @@ document.getElementById('btn-save-settings')?.addEventListener('click', async ()
 
 // ── Services CRUD ──────────────────────────────────────────
 const servicesList = document.getElementById('services-list');
+let editingServiceIndex = null;
+
+function resetServiceForm() {
+    editingServiceIndex = null;
+    document.getElementById('svc-name').value = '';
+    document.getElementById('svc-duration').value = '';
+    document.getElementById('service-form-title').textContent = 'Agregar servicio';
+    document.getElementById('btn-add-service').innerText = 'Agregar Servicio';
+    document.getElementById('btn-cancel-service-edit').style.display = 'none';
+}
+
+function editService(idx) {
+    const svc = proServices[idx];
+    if (!svc) return;
+
+    editingServiceIndex = idx;
+    document.getElementById('svc-name').value = svc.name || '';
+    document.getElementById('svc-duration').value = svc.duration || '';
+    document.getElementById('service-form-title').textContent = 'Editar servicio';
+    document.getElementById('btn-add-service').innerText = 'Guardar Cambios';
+    document.getElementById('btn-cancel-service-edit').style.display = 'block';
+    document.getElementById('svc-name').focus();
+}
 
 function renderServicesList() {
     servicesList.innerHTML = '';
@@ -784,19 +811,31 @@ function renderServicesList() {
                 <span class="svc-name">${sanitize(svc.name)}</span>
                 <span class="svc-duration">${svc.duration} min</span>
             </div>
+            <div class="svc-actions">
+                <button class="btn-edit-outline btn-edit-svc" data-idx="${idx}">Editar</button>
                 <button class="btn-cancel-outline btn-remove-svc" data-idx="${idx}">Eliminar</button>
+            </div>
             `;
         servicesList.appendChild(row);
     });
 }
 
 servicesList?.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.btn-remove-svc');
-    if (!btn) return;
-    const idx = parseInt(btn.dataset.idx);
+    const editBtn = e.target.closest('.btn-edit-svc');
+    if (editBtn) {
+        editService(parseInt(editBtn.dataset.idx));
+        return;
+    }
+
+    const removeBtn = e.target.closest('.btn-remove-svc');
+    if (!removeBtn) return;
+
+    const idx = parseInt(removeBtn.dataset.idx);
     proServices.splice(idx, 1);
     try {
         await updateDoc(proDoc(db, PRO_ID), { services: proServices });
+        if (editingServiceIndex === idx) resetServiceForm();
+        if (editingServiceIndex !== null && editingServiceIndex > idx) editingServiceIndex--;
         renderServicesList();
         showToast("Servicio eliminado.", "success");
     } catch (e) {
@@ -817,19 +856,28 @@ document.getElementById('btn-add-service')?.addEventListener('click', async () =
     btn.innerText = 'Guardando...';
 
     try {
-        proServices.push({ name, duration });
+        const updatedService = { name, duration };
+        const isEditing = editingServiceIndex !== null;
+
+        if (isEditing) {
+            proServices[editingServiceIndex] = updatedService;
+        } else {
+            proServices.push(updatedService);
+        }
+
         await updateDoc(proDoc(db, PRO_ID), { services: proServices });
-        document.getElementById('svc-name').value = '';
-        document.getElementById('svc-duration').value = '';
+        resetServiceForm();
         renderServicesList();
-        showToast("Servicio agregado.", "success");
+        showToast(isEditing ? "Servicio actualizado." : "Servicio agregado.", "success");
     } catch (e) {
-        showToast("Error al agregar servicio.", "error");
+        showToast("Error al guardar servicio.", "error");
     } finally {
         btn.disabled = false;
-        btn.innerText = 'Agregar Servicio';
+        btn.innerText = editingServiceIndex === null ? 'Agregar Servicio' : 'Guardar Cambios';
     }
 });
+
+document.getElementById('btn-cancel-service-edit')?.addEventListener('click', resetServiceForm);
 
 // ── Reminders ──────────────────────────────────────────────
 async function loadReminders() {

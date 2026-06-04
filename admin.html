@@ -95,6 +95,7 @@
                         <div class="form-group">
                             <label>Intervalo entre citas (minutos)</label>
                             <select id="set-interval">
+                                <option value="0">0 min</option>
                                 <option value="15">15 min</option>
                                 <option value="20">20 min</option>
                                 <option value="30">30 min</option>
@@ -138,7 +139,7 @@
                         <div id="services-list"></div>
 
                         <hr class="settings-divider">
-                        <h4 class="settings-subtitle">Agregar servicio</h4>
+                        <h4 class="settings-subtitle" id="service-form-title">Agregar servicio</h4>
                         <div class="form-group">
                             <label>Nombre del servicio</label>
                             <input type="text" id="svc-name" placeholder="Ej: Consulta general">
@@ -149,6 +150,8 @@
                                 inputmode="numeric">
                         </div>
                         <button class="btn-primary" id="btn-add-service">Agregar Servicio</button>
+                        <button class="btn-secondary btn-service-cancel" id="btn-cancel-service-edit"
+                            style="display: none;">Cancelar edición</button>
                     </div>
 
                     <div class="pro-card settings-card" style="margin-top: 16px;">

@@ -369,8 +369,18 @@ async function saveRutAndFinish() {
 
         gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(gcalTitle)}&dates=${startStr}/${endStr}&ctz=America/Santiago&details=${encodeURIComponent(gcalDetails)}`;
 
-        document.getElementById('success-detail').textContent =
-            `Te esperamos el ${bookingData.date} a las ${bookingData.time}.`;
+        const bookedDate = new Date(`${bookingData.date}T12:00:00`);
+        const readableDate = bookedDate.toLocaleDateString('es-CL', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        document.getElementById('success-detail').innerHTML = `
+            <span class="success-date">Te esperamos el ${sanitize(readableDate)}</span>
+            <strong class="success-time">${sanitize(bookingData.time)}</strong>
+        `;
 
         const contactBtn = document.getElementById('btn-contact-pro');
         if (contactBtn && validateChileMobile(proPhone)) {
